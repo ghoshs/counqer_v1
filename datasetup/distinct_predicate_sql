@@ -1,0 +1,8 @@
+--- For DBpedia mapped
+select t.pred, count (*) from (select * from spot_triples where pred like 'http://dbpedia.org/ontology/%') as t group by t.pred order by count desc
+
+-- For DBpedia raw
+select t.pred, count (*) from (select * from spot_triples where pred like 'http://dbpedia.org/property/%') as t group by t.pred order by count desc
+
+-- For WD 
+select t.pred, count (*) from (select * from wikidata_spot where pred like 'http://www.wikidata.org/prop/%') as t group by t.pred order by count desc

@@ -83,7 +83,7 @@ def find_type(pred, val, db):
 		valtype = 'date' if re.match(date, val) is not None else None
 
 	# check entitty type
-	if valtype is None and val.startswith(db.prefix):
+	if valtype is None and val.startswith(tuple(db.prefix)):
 		valtype = 'named_entity'
 
 	# check people or city names in string values
@@ -112,6 +112,9 @@ def insertValues(outfile, db):
 	g.parse(outfile, format='turtle')
 	for s,p,o in g:
 		# print s.encode('utf-8'),p.encode('utf-8'),o.encode('utf-8')
+		if not s.encode('utf-8').startswith(tuple(db.prefix)):
+			# do not insert tuples whose subject is a property
+			continue
 		valtype=find_type(p.encode('utf-8'), o.encode('utf-8'), db)
 		cur.execute(sql.SQL("""INSERT INTO {}(sub, pred, obj, obj_type) VALUES (%s, %s, %s, %s)""").format(sql.Identifier(db.tablename)), (s, p, o, valtype))
 	db.conn.commit()
@@ -122,34 +125,44 @@ def readttl(infile, outfile, db, restart):
 		ttlcontent = [] 
 		counter = 0
 		triple_count = 0
-		for line in tqdm(fp, initial=restart):
-			print(line)
-			break
-			# ttlcontent.append(line)
-			# counter = counter + 1
-			# triple_count = triple_count + 1
-			# # out.write(line+'\n')
-			# if counter < 10000:
-			# 	continue
-			# 	# line = fp.readline()  
-			# else:
-			# 	out = open(outfile, 'w')
-			# 	out.write('\n'.join(ttlcontent))
-			# 	out.close()
-			# 	insertValues(outfile, db)
-			# 	# if triple_count%10000 == 0:
-			# 		# print("Triples committed = %d\n" %(triple_count))
-			# 	os.remove(outfile)
-			# 	counter = 0
-			# 	ttlcontent = []
+		for i, line in tqdm(enumerate(fp)):
+			if i < restart:
+				continue
+			# elif i>=(restart-5) and i <= restart+1:
+				# print(line)
+			else:
+				# break
+				ttlcontent.append(line)
+				counter = counter + 1
+				triple_count = triple_count + 1
+				# out.write(line+'\n')
+				if counter < 10000:
+					continue
+					# line = fp.readline()  
+				else:
+					out = open(outfile, 'w')
+					out.write('\n'.join(ttlcontent))
+					out.close()
+					try:
+						insertValues(outfile, db)
+					except:
+						print('Stopped at triple count: %d\n' &(triple_count))
+					# if triple_count%10000 == 0:
+						# print("Triples committed = %d\n" %(triple_count))
+					os.remove(outfile)
+					counter = 0
+					ttlcontent = []
 
-	# if len(ttlcontent)>0:		
-		# out = open(outfile, 'w')
-		# out.write('\n'.join(ttlcontent))
-		# out.close()
-		# insertValues(outfile, db)
-		# os.remove(outfile)
-	# print("Triples committed in %s = %d\n" %(infile, triple_count))
+	if len(ttlcontent)>0:		
+		out = open(outfile, 'w')
+		out.write('\n'.join(ttlcontent))
+		out.close()
+		try:
+			insertValues(outfile, db)
+		except:
+			print('Stopped at triple count: %d\n' &(triple_count))
+		os.remove(outfile)
+	print("Triples committed in %s = %d\n" %(infile, triple_count))
 
 	# fp.close()
 	# out.close()
