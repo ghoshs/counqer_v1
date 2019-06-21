@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Counting Quantifiers</title>
+	<meta charset="utf-8">
+	<!-- mobile rendering with initial zoom level-->
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<!-- JQuery -->
+	<script src="{{ url_for('static', filename='scripts/jquery.min.js') }}"></script>
+	<!-- Bootstrap files -->
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/bootstrap.min.css') }}">
+	<script src="{{ url_for('static', filename='scripts/bootstrap.min.js') }}"></script>
+	<!-- stylesheet -->
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/mystyles.css') }}">
+</head>
+<body>
+<div class="jumbotron text-center">
+	<!-- <h2>CounQER: Counting Quantifiers and related Entity-valued Relations</h2> -->
+	<h2>CounQER: Extending Question Answering with Aligned Counting and Enumerating Predicates</h2>
+	<!-- <hr> -->
+	
+</div>
+
+<ul class="nav nav-tabs">
+	<li class="nav-item">
+		<a class="nav-link active" href="#home">Home</a>
+	</li>
+	<li class="nav-item">
+		<a class="nav-link" href="#qa">QA</a>
+	</li>
+	<li class="nav-item">
+		<a class="nav-link" href="#consistency">Consistency</a>
+	</li>
+</ul>
+
+<div class="container" id="home">
+	<h3>This is our home!</h3>
+	
+	<p>We provide a project overview in here.</p>
+	<hr>
+</div>
+
+<div class="container" id="qa">
+	<h3>This is the QA section!</h3>
+	<div class="row">
+		<p>Provide the name of an entity (either a subject or an object) and pick any predicate from the dropdown. CounQER retrieves SPO triples from Knowledge Bases which answer your query. Additionally, it also tries to provide supplementary count related facts with respect to the queried entity.<br>
+		You can choose between two Knowledge Bases - <strong>Wikidata</strong> <img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30"> and <strong>DBpedia</strong> <img src="{{ url_for('static', filename='images/DBpediaLogo.png') }}" width="30">.<br>
+		You may also try out some pre-defined queries in the examples.</p>
+		<!-- <hr> -->
+	</div>
+	<!-- <form class="row"> -->
+		<div class="row vertical-align no-gutter">
+			<div class="col-sm-3">
+				<div class="input-group">
+					<span class="input-group-addon">Subject</span>
+					<input autoComplete="off" id="subject" type="text" class="form-control" name="subject" placeholder="Subject" list="subentities">
+					<datalist id="subentities"></datalist>
+				</div>
+			</div>
+			<div class="col-sm-3">
+				<div class="input-group">
+					<span class="input-group-addon">Predicate</span>
+					<input autoComplete="off" id="predicate" type="text" class="form-control" name="predicate" placeholder="Predicate" list="predentities">
+					<datalist id="predentities"></datalist>
+				</div>
+			</div>
+			<div class="col-sm-3">
+				<div class="input-group">
+					<span class="input-group-addon">Object</span>
+					<input autoComplete="off" id="object" type="text" class="form-control" name="object" placeholder="Object" list="objentities">
+					<datalist id="objentities"></datalist>
+				</div>
+			</div>
+			<div class="col-sm-1">
+				<button type="button" class="btn btn-link" id="query">
+					<span class="glyphicon glyphicon-search" style="font-size: 2em"></span>
+				</button>
+			</div>
+			<div class="col-sm-2">
+				<div class="btn-grp">
+					<!-- <button type="button" class="btn btn-link">
+						<img src="images/ocat1.png" width="50">
+					</button>
+					<div class="dropdown-content"> -->
+						<button type="button" class="btn btn-outline-info" id="WD-btn">
+							<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30">
+						</button>
+						<button type="button" class="btn btn-link" id="DBP-btn">
+							<img src="{{ url_for('static', filename='images/DBpediaLogo.png') }}" width="30">
+						</button>
+					<!-- </div> -->
+				</div>
+			</div>
+		</div>
+		<div id="formalert" class="row vertical-align" role="alert" style="display: none" data-hide="formalert">
+			<div class="alert alert-danger alert-dismissible">
+				<!-- Give it a click if you like.
+				<button type="button" class="close" aria-label="Close">
+				<span aria-hidden="true">&times;</span>
+				</button> -->
+			</div>
+		</div>
+	<!-- </form> -->
+	<br>
+	<!-- result section with query status bar, examples and returned SPO triples  -->
+	<div class="row" style="justify-content: left">
+		<div class="col-sm-10">	
+			<!-- form refresh & query status -->
+			<div class="row">
+				<div class="col-sm-1 refresh">
+					<button type="button" class="btn btn-link">
+						<!-- <img src="images/ocat2.png" width="50"> -->
+						<span class="glyphicon glyphicon-refresh" style="font-size: 2.7em"></span>
+					</button>
+				</div>
+				<div id="displayalert" class="col-sm-8" role="alert">
+					<div class="alert alert-info alert-dismissible" style="margin-bottom: 0px">
+					 We are waiting for your input.
+					<!-- <button type="button" class="close" aria-label="Close"> -->
+					<!-- <span aria-hidden="true">&times;</span> -->
+					<!-- </button> -->
+					</div>
+				</div>
+			</div>
+			<!-- direct result section -->
+			<!-- <div class="row vertical-align first" style="display: none">
+				<div class="col btn" id="s1">
+				</div>
+				<div class="col btn btn-primary" id="p1">
+				</div>
+				<div class="col btn" id="o1"> 
+				</div>
+			</div> -->
+			<table class="table first" style="display: none">
+				<thead>
+					<tr>
+						<td id="s1" class="text-center partial"></td>
+						<td class="text-center"><div class="col-12 btn btn-primary" id="p1"></div></td>
+						<td id="o1" class="text-center partial"></td>
+					</tr>
+				</thead>
+			</table>
+			<br>
+			<!-- related result section -->
+			<div class="row no-gutter text-center">
+				<!-- <div class="second" style="display: none">
+					<strong>Related Predicates</strong>
+					<hr>
+				</div> -->
+				<table class="table second" style="display: none">
+					<thead>
+						<tr><td class="text-center" colspan="3"></td></tr>
+					</thead>
+					<tbody>
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<!-- Example column -->
+		<div class="col-sm-2">
+			<!-- <button type="button" class="btn btn-primary btn-block"> -->
+				<!-- <span class="glyphicon glyphicon-chevron-down"></span> Examples -->
+			<!-- </button> -->
+				<!-- <div class="dropdown-content"> -->
+				<div class="row">
+					<strong>Examples</strong>
+				</div>
+				<div class="row">
+					<button type="button" class="btn btn-link" id="example1">
+						<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30"> Grey's Anatomy, Creator, ?
+					</button>
+				</div>
+				<div class="row">
+					<button type="button" class="btn btn-link" id="example2">
+						<img src="{{ url_for('static', filename='images/DBpediaLogo.png') }}" width="30"> McGill University, Faculty size, ?
+					</button>
+				</div>
+				<div class="row">
+					<button type="button" class="btn btn-link" id="example3">
+						<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30"> World War I, Deaths, ?
+					</button>
+				</div>
+				<div class="row">
+					<button type="button" class="btn btn-link" id="example4">
+						<img src="{{ url_for('static', filename='images/DBpediaLogo.png') }}" width="30"> ?, Hub airport, Frankfurt
+					</button>
+				</div>
+				<div class="row">
+					<button type="button" class="btn btn-link" id="example5">
+						<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30"> Game of Thrones, Series, ?
+					</button>
+				</div>
+		</div>
+	</div>
+	<hr>
+</div>
+
+<div class="container" id="consistency">
+	<h3>This section shows alignment distribution</h3>
+	<!-- <form class="row"> -->
+		<div class="row vertical-align no-gutter">
+			<div class="col-sm-4">
+				<div class="input-group">
+					<span class="input-group-addon">Counting Predicate</span>
+					<input autoComplete="off" id="counting_predicate" type="text" class="form-control" name="counting_predicate" placeholder="counting predicate">
+					<!-- <datalist id="subentities"></datalist> -->
+				</div>
+			</div>
+			<div class="col-sm-4">
+				<div class="input-group">
+					<span class="input-group-addon">Enumerating Predicate</span>
+					<input autoComplete="off" id="enumerating_predicate" type="text" class="form-control" name="enumerating_predicate" placeholder="enumerating predicate">
+					<!-- <datalist id="predentities"></datalist> -->
+				</div>
+			</div>
+			<div class="col-sm-1">
+				<button type="button" class="btn btn-link">
+					<span class="glyphicon glyphicon-search" style="font-size: 2em"></span>
+				</button>
+			</div>
+		</div>
+	</div>
+	<!-- <div class="row"> -->
+		<img src="{{ url_for('static', filename='images/WD_child_noOfChildren.png') }}", width="500">
+	<!-- </div> -->
+</div>
+
+<div class="footer">
+	<img src="{{ url_for('static', filename='images/mpilogo-inf-compact.png') }}" width="100">
+	<a href="https://imprint.mpi-klsb.mpg.de/inf/counqer.mpi-inf.mpg.de">Imprint</a> |
+	<a href="https://data-protection.mpi-klsb.mpg.de/inf/counqer.mpi-inf.mpg.de">Data Protection</a>
+
+</div>
+<script type="text/javascript" src="{{ url_for('static', filename='scripts/myscript.js') }}"></script>
+</body>
+</html>
