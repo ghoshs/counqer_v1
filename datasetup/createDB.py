@@ -105,18 +105,25 @@ def find_type(pred, val, db):
 
 	return valtype
 
-def insertValues(outfile, db):
+def insertValues(outfile, db, iter):
 	g = Graph()
 	cur = db.conn.cursor()
 	# gdict = {}
 	g.parse(outfile, format='turtle')
+	i= 1
 	for s,p,o in g:
 		# print s.encode('utf-8'),p.encode('utf-8'),o.encode('utf-8')
 		if not s.encode('utf-8').startswith(tuple(db.prefix)):
 			# do not insert tuples whose subject is a property
 			continue
 		valtype=find_type(p.encode('utf-8'), o.encode('utf-8'), db)
-		cur.execute(sql.SQL("""INSERT INTO {}(sub, pred, obj, obj_type) VALUES (%s, %s, %s, %s)""").format(sql.Identifier(db.tablename)), (s, p, o, valtype))
+		try:
+			cur.execute(sql.SQL("""INSERT INTO {}(sub, pred, obj, obj_type) VALUES (%s, %s, %s, %s)""").format(sql.Identifier(db.tablename)), (s, p, o, valtype,))
+		except:
+			print("s: %s; p: %s; o: %s" %(s,p,o))
+			print('Stopped at triple count: %d\n' %(iter-10000+i))
+		finally:
+			i += 1
 	db.conn.commit()
 	cur.close()
 
@@ -143,10 +150,7 @@ def readttl(infile, outfile, db, restart):
 					out = open(outfile, 'w')
 					out.write('\n'.join(ttlcontent))
 					out.close()
-					try:
-						insertValues(outfile, db)
-					except:
-						print('Stopped at triple count: %d\n' &(triple_count))
+					insertValues(outfile, db, i)
 					# if triple_count%10000 == 0:
 						# print("Triples committed = %d\n" %(triple_count))
 					os.remove(outfile)
@@ -157,10 +161,9 @@ def readttl(infile, outfile, db, restart):
 		out = open(outfile, 'w')
 		out.write('\n'.join(ttlcontent))
 		out.close()
-		try:
-			insertValues(outfile, db)
-		except:
-			print('Stopped at triple count: %d\n' &(triple_count))
+		# try:
+		insertValues(outfile, db, i)
+		# except:	
 		os.remove(outfile)
 	print("Triples committed in %s = %d\n" %(infile, triple_count))
 
