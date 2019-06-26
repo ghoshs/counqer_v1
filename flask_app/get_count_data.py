@@ -8,11 +8,22 @@ case V  : <?s1,p1,o1>; p1 = direct EP; related predicates are CP
 case VI : <?s1,p1,o1>; p1 = inverse EP; related predicates are CP
 '''
 
+## server edits
+# import sys
+# sys.path.append('/var/www/flask_app')
+
 import os
 import csv
 import pandas as pd
 import numpy as np
 from SPARQLWrapper import SPARQLWrapper, JSON
+
+## server edits
+# fname_score_wd = '/vaw/www/flask_app/static/wikidata/alignment/wd_alignments.csv'
+# fname_score_dbp = '/vaw/www/flask_app/static/dbpedia/alignment/dbp_alignments.csv'
+
+fname_score_wd = './static/wikidata/alignment/wd_alignments.csv'
+fname_score_dbp = './static/dbpedia/alignment/dbp_alignments.csv'
 
 # read prednames and map to ID
 def open_file(path):
@@ -539,7 +550,7 @@ def related_predicate(option, subID, predID, objID):
 		# path = '../wikidata/alignment/scores'
 		# fname_score_by_E = os.path.join('../wikidata/alignment/scores', 'rel_score_sorted_by_E.csv')
 		# fname_count_score = os.path.join('../wikidata/count_information', 'count_correlation.csv')
-		fname_score = './static/wikidata/alignment/wd_alignments.csv'
+		fname_score = fname_score_wd
 	else:
 		# path = '../alignment/scores'
 		# fname_score_by_E = os.path.join('../alignment/scores', 'rel_score_sorted_by_E.csv')
@@ -547,7 +558,7 @@ def related_predicate(option, subID, predID, objID):
 		# # server edits
 		# fname_score_by_E = os.path.join('../dbpedia/alignment/scores', 'rel_score_sorted_by_E.csv')
 		# fname_count_score = os.path.join('../dbpedia/count_information', 'count_correlation.csv')
-		fname_score = './static/dbpedia/alignment/dbp_alignments.csv'
+		fname_score = fname_score_dbp
 		
 	# df_1 = pd.read_csv(fname_score_by_E)
 	# df_2 = pd.read_csv(fname_count_score)

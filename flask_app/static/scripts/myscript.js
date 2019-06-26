@@ -22,8 +22,8 @@ var localpath ='http://127.0.0.1:5000/static/';
 var flaskurl = 'http://localhost:5000/spoquery'; 
 
 /** server edits**/
-// var localpath ='http://counqer.mpi-inf.mpg.de:5000/static/';
-// var flaskurl = 'http://counqer.mpi-inf.mpg.de:5000/spoquery'; 
+// var localpath ='https://counqer.mpi-inf.mpg.de/static/';
+// var flaskurl = 'https://counqer.mpi-inf.mpg.de/spoquery'; 
 
 // function to process the jsonp (json padding) function returned by the json files and
 // populate the predicate options
