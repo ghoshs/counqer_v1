@@ -26,9 +26,9 @@ class PostgresDB:
 	def createDBconn(self, params):
 		try: 
 			self.conn = psycopg2.connect("dbname="+params['dbname']+" user="+params['user']+" host="+params['host']+" password="+params['password'])
-			print "Connected to the db"
+			print("Connected to the db")
 		except:
-			print "Unable to connect to the db"
+			print("Unable to connect to the db")
 
 	def createTable(self, tablename):
 		cur = self.conn.cursor()
@@ -36,13 +36,13 @@ class PostgresDB:
              (sub text, pred text, obj text, obj_type text)
 				""").format(sql.Identifier(tablename)))
 		self.conn.commit()
-		print "Table created if does not exist"
+		print("Table created if does not exist")
 		cur.close()
 
 	def closeconn(self):
 		if self.conn is not None:
 			self.conn.close()
-			print "Connection to db closed"
+			print("Connection to db closed")
 
 
 def get_names(fname):

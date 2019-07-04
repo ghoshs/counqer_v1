@@ -10,3 +10,7 @@ SPARQLWrapper
 joblib
 gensim
 nltk
+sasl
+thrift
+thrift-sasl
+PyHive
