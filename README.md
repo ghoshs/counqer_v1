@@ -13,10 +13,12 @@ Once inside the environment change to `counqer/` and install the required packag
 Create a local n-tuple DB from RDF dumps of KBs.
 
 1. create*<KB-name>*DB.py
+	a. This file calls `createDB` if the table is to be hosted in a posstgres server
+	b. `createcsv` is called to create a csv file which can be imported to hive as a table.
 2. query the SPO tables for a list of distinct predicates and their frequencies. Save results as csv (`predfreq_p_all.csv`) corresponding DB subfolder.
 3. generate_property_details.py
 
 
 ### Demo 
 
-The demo is developed in Python using Flask webframework. The site is under contruction and may not exhibit full functionalites of the system.
+The demo is developed in Python using Flask webframework. The site is under contruction and may not exhibit full functionalites of the system. 
