@@ -14,3 +14,8 @@ select t.pred, count (*) from (select * from spot_triples where pred like 'http:
 select t.pred, count (*) from (select * from wikidata_spot where pred like 'http://www.wikidata.org/prop/%') as t group by t.pred order by count desc
 -- inverse
 select t.pred, count (*) from (select * from wikidata_spot where pred like 'http://www.wikidata.org/prop/%' and obj_type = 'named_entity') as t group by t.pred order by count desc
+
+-- For FB
+select pred, count(*) from freebase_spot group by pred order by count desc
+-- inverse
+select t.pred, count (*) from (select * from freebase_spot where obj_type = 'named_entity') as t group by t.pred order by count desc

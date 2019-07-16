@@ -7,16 +7,16 @@ import db_config as cfg
 
 def main():
 	# set parameters
-	tablename = {'direct': 'fb_pred_property', 'indirect': 'fb_inv_pred_property'}
-	spot_tb = 'freebase_spot'
-	predfreq_filename = {'direct': './predfreq_p_minus_top_5.csv', 'indirect': './inv_predfreq_p_minus_top_5.csv'}
+	tablename = {'direct': 'wd_pred_property', 'indirect': 'wd_inv_pred_property'}
+	spot_tb = 'wikidata_spot'
+	predfreq_filename = {'direct': './predfreq_p_all.csv', 'indirect': './inv_predfreq_p_all.csv'}
 
 	# For direct property details
-	# db = pdp.PostgresDB({'property': tablename['direct'], 'spot': spot_tb}, cfg.postgres_params)
-	# db.create_pred_property_Table()
-	# cutoff = {'required': False, 'value': 1000000000}
-	# pdp.create_direct_csv_file(db)
-	# pdp.generate_details(predfreq_filename['direct'], db, cutoff)
+	db = pdp.PostgresDB({'property': tablename['direct'], 'spot': spot_tb}, cfg.postgres_params)
+	db.create_pred_property_Table()
+	cutoff = {'required': False, 'value': 1000000000}
+	pdp.create_direct_csv_file(db)
+	pdp.generate_details(predfreq_filename['direct'], db, cutoff)
 
 	# For inverse property details
 	db = pdp.PostgresDB({'property': tablename['indirect'], 'spot': spot_tb}, cfg.postgres_params)

@@ -16,4 +16,3 @@ if __name__ == '__main__':
 	outfile = '/GW/D5data-11/existential-extraction/freebase_spot.csv'
 	db = createcsv.dbtable(kbprefix)
 	createcsv.readttl(infile, outfile, db, restart)
-	db.closeconn()

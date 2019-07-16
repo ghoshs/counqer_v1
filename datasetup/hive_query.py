@@ -14,14 +14,13 @@ class Hive:
 # function to create a table from a csv file stored in the HDFS
 def create_table(pyhv):
 	cur = pyhv.conn.cursor()
-	cur.execute("CREATE TABLE IF NOT EXISTS ghoshs_sample (sub string, pred string, obj string) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' STORED AS TEXTFILE LOCATION '/user/ghoshs/FB' TBLPROPERTIES ('skip.header.line.count' = '1')")
-	# pyhv.conn.commit()
+	cur.execute("CREATE TABLE IF NOT EXISTS ghoshs_freebase_spot (sub string, pred string, obj string, obj_type string) ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde' WITH SERDEPROPERTIES ('separatorChar' = '\t') STORED AS TEXTFILE LOCATION '/user/ghoshs/FB' TBLPROPERTIES ('skip.header.line.count' = '1')")
 	cur.close()
 
 # function to drop a table if it exists
 def drop_table(pyhv):
 	cur = pyhv.conn.cursor()
-	cur.execute("DROP TABLE IF EXISTS ghoshs_sample")
+	cur.execute("DROP TABLE IF EXISTS ghoshs_freebase_spot")
 	cur.close()
 
 # function to display all tables in the Hive metastore
@@ -42,6 +41,7 @@ def show_samples(pyhv):
 
 def main():
 	pyhv = Hive()
+	# drop_table(pyhv)
 	create_table(pyhv)
 	show_table(pyhv)
 	pyhv.close_connection()
