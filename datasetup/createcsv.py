@@ -10,11 +10,9 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 
 class dbtable():
-	def __init__(self, kbprefix):
+	def __init__(self, kbprefix, top_predicates):
 		self.prefix = kbprefix
-		self.top5_predicate = ['http://rdf.freebase.com/ns/common.notable_for.display_name', 
-							   'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', 'http://rdf.freebase.com/ns/type.object.type',
-							   'http://rdf.freebase.com/ns/type.type.instance', 'http://rdf.freebase.com/ns/type.object.key']
+		self.top5_predicate = top_predicates
 
 		self.readbuffer = 20000
 		self.writebuffer = 50

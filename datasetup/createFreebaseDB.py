@@ -11,8 +11,11 @@ if __name__ == '__main__':
 	tablename = 'freebase_spot'
 	# any specific entity prefixes used by the KB that can be used to detect proper subjects and named entity objects
 	kbprefix = ['http://rdf.freebase.com/ns/m.', 'http://rdf.freebase.com/ns/g.']
+	top_predicates = ['http://rdf.freebase.com/ns/common.notable_for.display_name', 
+							   'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', 'http://rdf.freebase.com/ns/type.object.type',
+							   'http://rdf.freebase.com/ns/type.type.instance', 'http://rdf.freebase.com/ns/type.object.key']
 	# path to the KB dump file
 	infile = '/GW/D5data-11/existential-extraction/freebase-rdf-latest.gz'
 	outfile = '/GW/D5data-11/existential-extraction/freebase_spot.csv'
-	db = createcsv.dbtable(kbprefix)
+	db = createcsv.dbtable(kbprefix, top_predicates)
 	createcsv.readttl(infile, outfile, db, restart)
