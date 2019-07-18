@@ -6,6 +6,8 @@ from psycopg2 import sql
 import re
 from SPARQLWrapper import SPARQLWrapper, JSON
 
+fb_label = {}
+
 class DBconn():
 	def __init__(self):
 		self.params = cfg.postgres_params
@@ -49,9 +51,12 @@ def get_label_dbpedia(entity):
 		return ''
 
 def get_label_freebase(entity):
+	global fb_label
 	if entity.startswith('http://rdf.freebase.com/'):
 		if entity.startswith(tuple(['http://rdf.freebase.com/ns/m.', 'http://rdf.freebase.com/ns/g.'])):
-			return 'get_label'
+			id = entity.split('http://rdf.freebase.com/ns/')[-1]
+			if id in fb_label:
+				return fb_label[id]
 		else:
 			label = entity.split('/')[-1]
 			return ' '.join([x for x in re.split('[^a-zA-Z0-9]', label) if len(x) > 0])
@@ -119,10 +124,22 @@ def write_data_item(path, outfile, databuffer):
 		writer.writerow(item)
 	fp.close()
 
+def populate_fb_labels():
+	global fb_label
+	file = '/GW/D5data-11/existential-extraction/fb_entity_labels_short.csv'
+	with open(file)as fp:
+		reader = csv.reader(fp)
+		for row in tqdm(reader):
+			fb_label[row[0]] = row[1]
+		print('labels',fb_label['m.087d6'])
+
 def read_samples(path, infiles, outfile, oldcols):
 	db = DBconn()
 	query_limit = 2
 	for infile in infiles:
+		kb_name = db.kb_map[infile.split('.csv')[0]]
+		if kb_name is 'freebase_spot':
+			populate_fb_labels()
 		with open(path + '/' + infile) as fp:
 			reader = csv.DictReader(fp)
 			databuffer = []
@@ -130,7 +147,6 @@ def read_samples(path, infiles, outfile, oldcols):
 			for row in tqdm(reader):
 				data_item = [row[col] for col in oldcols]
 				predicate = row[oldcols[0]]
-				kb_name = db.kb_map[infile.split('.csv')[0]]
 				spo_list = get_spo(db, predicate, kb_name, query_limit)
 				data_item.extend(spo_list)
 				databuffer.append(data_item)
@@ -144,14 +160,15 @@ def read_samples(path, infiles, outfile, oldcols):
 def main():
 	# test script using the small data in the ./test path
 	path = './counting'
-	infiles = ['dbp_map.csv', 'dbp_raw.csv', 'wd.csv']
+	infiles = ['dbp_map.csv', 'dbp_raw.csv', 'wd.csv', 'fb.csv']
 	outfile = 'sample.csv'
 	oldcols = ['predicate', 'numeric_10_ptile', 'numeric_90_ptile']
 	newcols = ['s1', 's1_label', 'o1', 'o1_label', 's2', 's2_label', 'o2', 'o2_label', 'p_label']
 
 	create_outfile(path, outfile, oldcols, newcols)
 	read_samples(path, infiles, outfile, oldcols)
-	# read_samples(path, ['fb.csv'], outfile, oldcols)
+	# infiles = ['fb.csv']
+	# read_samples(path, infiles, outfile, oldcols)
 
 if __name__ == '__main__':
 	main()
