@@ -12,8 +12,8 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 @cross_origin()
 def parse_request():
 	option = request.args.get('option')
-	subID = urllib.unquote(request.args.get('subject'))
-	objID = urllib.unquote(request.args.get('object'))
+	subID = urllib.parse.unquote(request.args.get('subject'))
+	objID = urllib.parse.unquote(request.args.get('object'))
 	predID = request.args.get('predicate')
 	print(option, subID, predID, objID)
 	response = related_predicate(option, subID, predID, objID)
@@ -25,5 +25,5 @@ def display_mainpage():
 	return render_template('index.html')
 
 if __name__ == '__main__':
-	app.run(debug=True, host='0.0.0.0')
-	# app.run(debug=True, port=5000, ssl_context='adhoc')
+	# app.run(debug=True, host='0.0.0.0')
+	app.run(debug=True)

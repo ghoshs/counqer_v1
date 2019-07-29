@@ -7,9 +7,9 @@ import db_config as cfg
 
 def main():
 	# set parameters
-	tablename = {'direct': 'fb_pred_property', 'indirect': 'fb_inv_pred_property'}
-	spot_tb = 'freebase_spot'
-	predfreq_filename = {'direct': './predfreq_p_minus_top_5.csv', 'indirect': './inv_predfreq_p_minus_top_5.csv'}
+	tablename = {'direct': 'dbp_map_pred_property', 'indirect': 'dbp_map_inv_pred_property'}
+	spot_tb = 'dbpedia_spot'
+	predfreq_filename = {'direct': './predfreq_p_all.csv', 'indirect': './inv_predfreq_p_all.csv'}
 
 	# For direct property details
 	db = pdp.PostgresDB({'property': tablename['direct'], 'spot': spot_tb}, cfg.postgres_params)

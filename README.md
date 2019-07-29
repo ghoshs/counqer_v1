@@ -1,4 +1,4 @@
-The CounQER system provides a pipeline for identifying set predicates in a KB. We use linguistic and co-occurrence alignment metrics to analse the relationship between the predicates. The results of these alignments can be explored in the project demo page at [http://counqer.mpi-inf.mpg.de:5000](http://counqer.mpi-inf.mpg.de:5000). The project uses [pgadmin](https://www.pgadmin.org/download/) to access its backend PostgreSQL database. 
+The CounQER system provides a pipeline for identifying set predicates in a KB. We use linguistic and co-occurrence alignment metrics to analse the relationship between the predicates. The results of these alignments can be explored in the project demo page at [https://counqer.mpi-inf.mpg.de](https://counqer.mpi-inf.mpg.de). The project uses [pgadmin](https://www.pgadmin.org/download/) to access its backend PostgreSQL database. 
 
 ### Requirements
 The project runs in a Python3 virtual environment. `requirements.txt` provides the list of the necessary packages.
@@ -27,8 +27,27 @@ Create a local n-tuple DB from RDF dumps of KBs.
 	```
 
 ### Crowd task for type identification
+Sample predicates from candidate KBs to present to the crowd annotators
 
+1. `sql_query_for_set_predicates` has the sql query used to sample data items for counting predicates in the first query
 
+	a. We filter out less (<50) frequent, non-integer (<5% integer values and >5% float values) predicates
+
+	b. The samples are saved in `./counting` folder as csv files under the names of the corresponding KBs.
+
+	c. Create a entity lookup list for freebase using `sql_fb_entity_label`.
+
+	d. `get_labelled_triples.py` reads all sampled predicates from `./counting` and creates a data file with labelled triples `./counting/counting_labelled_triples.csv`. 
+
+	e. `clean_labelled_triples.R` unifies triples from mltiple sources to create a csv file ready for upload to the crowd-sourcing platform. 
+
+	*NOTE*: Since Freebase returns empty subject labels we create a larger sample size (of 200 predicates) and select 100 samples with 5 complete example triples.
+
+2. `sql_query_for_set_predicates` has the sql query used to sample data items for enumerating predicates in the second query.
+	
+	a. Sampled data from each KB is saved in `./enumerating` folder.
+
+**Note** We create a test set containing honey-pot questions for figure-eight task (in `./test` folder). 
 
 ### Demo 
 

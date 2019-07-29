@@ -19,11 +19,11 @@ def main():
 	pdp.generate_details(predfreq_filename['direct'], db, cutoff)
 
 	# For inverse property details
-	db = pdp.PostgresDB({'property': tablename['indirect'], 'spot': spot_tb}, cfg.postgres_params)
-	db.create_invpred_property_Table()
-	cutoff = {'required': False, 'value': 1000000000}
-	pdp.create_inverse_csv_file(db)
-	pdp.generate_inv_pred_details(predfreq_filename['indirect'], db, cutoff)
+	# db = pdp.PostgresDB({'property': tablename['indirect'], 'spot': spot_tb}, cfg.postgres_params)
+	# db.create_invpred_property_Table()
+	# cutoff = {'required': False, 'value': 1000000000}
+	# pdp.create_inverse_csv_file(db)
+	# pdp.generate_inv_pred_details(predfreq_filename['indirect'], db, cutoff)
 	
 if __name__ == '__main__':
 	main()

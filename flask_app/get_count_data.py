@@ -17,6 +17,10 @@ import csv
 import pandas as pd
 import numpy as np
 from SPARQLWrapper import SPARQLWrapper, JSON
+import urllib2
+
+# For avoiding HTTP 403: Forbidden
+# import urllib.request
 
 ## server edits
 # fname_score_wd = '/vaw/www/flask_app/static/wikidata/alignment/wd_alignments.csv'
@@ -24,6 +28,11 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 
 fname_score_wd = './static/wikidata/alignment/wd_alignments.csv'
 fname_score_dbp = './static/dbpedia/alignment/dbp_alignments.csv'
+http_proxy = 'http://dmz-gw.mpi-klsb.mpg.de:3128'
+https_proxy = 'https://dmz-gw.mpi-klsb.mpg.de:3128'
+
+## server edits
+# urllib2.request.install_opener(urllib2.request.build_opener(urllib2.request.ProxyHandler({'http': http_proxy, 'https': https_proxy})))
 
 # read prednames and map to ID
 def open_file(path):
@@ -37,15 +46,23 @@ def open_file(path):
 
 def wd_sparql(query, pred_list):
 	response = []
-	sparql = SPARQLWrapper("https://query.wikidata.org/sparql")
+	sparql = SPARQLWrapper("https://query.wikidata.org/sparql", agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11")
 	sparql.setReturnFormat(JSON)
+	## server edits
+	# sparql.addParameter('http', http_proxy)
+	# sparql.addParameter('https', https_proxy)
 	wd_prefix = 'http://wikidata.org/entity/'
 	# idx = 0
 	flag_query1 = 0
 	for idx, item in enumerate(query):
 		sparql.setQuery(item)
-		results = sparql.query().convert()
+		try:
+			results = sparql.query().convert()
+		except Exception as e:
+			print(e)
+			return({'error': 'Exception at sparql query WD'})
 		print(results)
+		print('results are out!!')
 		query_vars = results["head"]["vars"]
 		if "results" in results:
 			o1val = []
@@ -296,6 +313,9 @@ def dbp_sparql(query, pred_list):
 	response = []
 	sparql = SPARQLWrapper("http://dbpedia.org/sparql")
 	sparql.setReturnFormat(JSON)
+	## server edits
+	# sparql.addParameter('http', http_proxy)
+	# sparql.addParameter('https', https_proxy)
 	prefixes = """PREFIX owl: <http://www.w3.org/2002/07/owl#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -312,7 +332,11 @@ PREFIX dbp: <http://dbpedia.org/property/>
 	flag_query1 = 0
 	for idx, item in enumerate(query):
 		sparql.setQuery(prefixes+item)
-		results = sparql.query().convert()
+		try:
+			results = sparql.query().convert()
+		except Exception as e:
+			print(e)
+			return({'error': 'Exception at sparql query DBP'})
 		print(results)
 		query_vars = results["head"]["vars"]
 		if "results" in results:

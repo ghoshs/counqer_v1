@@ -1,0 +1,20 @@
+
+select * from 
+(
+	select * from <KB-name>_pred_property
+	where pcent_int >= 0.05 and pcent_float <= 0.05 and frequency >= 50
+) as t 
+order by random() limit <KB-propertion>
+
+ KB name - KB propertion
+ DBP_map - 50
+ DBP_raw - 3750
+ FB      - 600
+ WD      - 500
+
+ select * from 
+(
+	select * from <KB-name>_pred_property
+	where (pcent_ne + pcent_comma_sep) >= 0.5 and (pcent_float + pcent_date) <= 0.05 and frequency >= 50
+) as t 
+order by random() limit <KB-propertion>

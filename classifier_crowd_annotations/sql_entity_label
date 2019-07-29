@@ -1,0 +1,26 @@
+
+-- Freebase entity labels
+
+select distinct sub, obj from freebase_spot 
+	where pred in ('http://rdf.freebase.com/ns/type.object.name', 'http://www.w3.org/2000/01/rdf-schema#label') 
+	order by sub, obj
+
+-- Wikidata entity labels
+SELECT distinct ?item ?label WHERE {
+  {
+   ?item schema:description ?desc;
+         rdfs:label ?label.
+    FILTER (langMatches(lang(?label), 'EN'))
+    FILTER (langMatches(lang(?desc), 'EN'))
+  }     
+}
+limit 1000
+
+-- Wikidata predicate labels
+SELECT ?pred ?predLabel WHERE {
+  {
+   ?pred wikibase:directClaim ?p;
+   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  }     
+}
+limit 1000

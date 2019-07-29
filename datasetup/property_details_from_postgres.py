@@ -122,7 +122,7 @@ def get_type_numeric(pred, db):
 			except Exception as e:
 				print(pred, row[0], e)
 		else:
-			obj_list.append(val)
+			obj_list.append(abs(val))
 	cur.close()
 	types['max'] = max(obj_list)
 	types['min'] = min(obj_list)

@@ -28,7 +28,7 @@ class DBconn():
 			print("Connection to db closed")
 
 def create_outfile(path, filename, oldcols, newcols):
-	fp = open(path + '/' + filename, 'w')
+	fp = open(path + '/' + path.split('/')[-1] + '_' + filename, 'w')
 	writer = csv.writer(fp, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
 	writer.writerow(oldcols + newcols)
 	fp.close()
@@ -59,7 +59,12 @@ def get_label_freebase(entity):
 				return fb_label[id]
 		else:
 			label = entity.split('/')[-1]
-			return ' '.join([x for x in re.split('[^a-zA-Z0-9]', label) if len(x) > 0])
+			pred_main = label.split('.')[-1]
+			domain = label.split('.')[0:-1]
+			domain = [' '.join(x.split('_')) for x in domain]
+			label = ' '.join(pred_main.split('_')) + ' (' + ', '.join(domain[-2:]) + ')'
+			# return ' '.join([x for x in re.split('[^a-zA-Z0-9]', label) if len(x) > 0])
+			return label
 	return ''
 
 def get_label_wikidata(entity, sparql):
@@ -96,31 +101,54 @@ def get_label(entity, kb_name, sparql):
 	else:
 		return ''
 
-def get_spo(db, predicate, kb_name, limit):
+def get_spo(db, predicate, kb_name, limit, obj_type, prev_spo_list=[]):
 	sparql = SPARQLWrapper("https://query.wikidata.org/sparql", agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11")
 	sparql.setReturnFormat(JSON)
 	spo_list = []
+	if len(prev_spo_list) == 0:
+		p_label = get_label(predicate, kb_name, sparql)
+	
 	cur = db.conn.cursor()
-	query = "SELECT * from (SELECT distinct(sub), obj from " + kb_name + " where pred=(%s) and obj_type='int') as t order by random() limit " + str(limit)
+	query = "SELECT * from (SELECT distinct(sub), obj from " + kb_name + " where pred=(%s) and obj_type='" + obj_type +"') as t order by random()"
 	cur.execute(query, [predicate])
-	# predicate may have only one triple
 	row = cur.fetchone()
+	count = 0
 	while row is not None:
+		if count >= limit:
+			break
 		s_label = get_label(row[0], kb_name, sparql)
-		o_label = get_label(row[1], kb_name, sparql)
-		spo_list.extend([row[0], s_label, row[1], o_label])
+		# do not use triples without labels
+		if len(s_label) == 0:
+			row = cur.fetchone()
+			continue
+		# Do not include triples already present in previous batch
+		try:
+			index1 = prev_spo_list.index(row[0])
+			index2 = prev_spo_list.index(row[1])
+		except:
+			if obj_type is 'int':
+				obj = abs(int(row[1])) 
+				spo_list.extend([row[0], s_label, obj]) 
+				count += 1
+			else:
+				o_label = get_label(row[1], kb_name, sparql)
+				if len(o_label) > 0:
+					spo_list.extend([row[0], s_label, o_label])
+					count += 1
 		row = cur.fetchone()
-	p_label = get_label(predicate, kb_name, sparql)
-	if len(spo_list) < limit*4:
-		l = len(spo_list)
-		spo_list.extend(['' for i in range(0,limit*4-l)])
-	spo_list.append(p_label)
+
+	if len(prev_spo_list) == 0:
+		spo_list.append(p_label)
+	else:
+		spo_list.extend(prev_spo_list)
+	# print('count', count)
 	return spo_list
 
 def write_data_item(path, outfile, databuffer):
-	fp = open(path + '/' + outfile, 'a')
+	fp = open(path + '/' + path.split('/')[-1] + '_' + outfile, 'a')
 	writer = csv.writer(fp, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
 	for item in databuffer:
+		item = [x.encode('utf8')  if type(x) not in [str, int, float] else x for x in item]
 		writer.writerow(item)
 	fp.close()
 
@@ -130,12 +158,19 @@ def populate_fb_labels():
 	with open(file)as fp:
 		reader = csv.reader(fp)
 		for row in tqdm(reader):
-			fb_label[row[0]] = row[1]
-		print('labels',fb_label['m.087d6'])
+			# only keep English/ digit labels
+			if type(row[1]) is bytes:
+				try:
+					row[1].decode('ascii')
+				except Exception as e:
+					pass
+				else:
+					fb_label[row[0]] = row[1].decode('ascii')
+		print('Total labels: ', len(fb_label))
+		# print('labels',fb_label['m.087d6'])
 
-def read_samples(path, infiles, outfile, oldcols):
+def read_samples(path, infiles, outfile, oldcols, query_limit=5, obj_type='int'):
 	db = DBconn()
-	query_limit = 2
 	for infile in infiles:
 		kb_name = db.kb_map[infile.split('.csv')[0]]
 		if kb_name is 'freebase_spot':
@@ -147,7 +182,17 @@ def read_samples(path, infiles, outfile, oldcols):
 			for row in tqdm(reader):
 				data_item = [row[col] for col in oldcols]
 				predicate = row[oldcols[0]]
-				spo_list = get_spo(db, predicate, kb_name, query_limit)
+				spo_list = []
+				completed = 0
+				# spo_list = get_spo(db, predicate, kb_name, query_limit)
+				# repeat query till you have 5 english data samples
+				while completed < query_limit:
+					spo_list = get_spo(db, predicate, kb_name, query_limit - completed, obj_type, spo_list)
+					if int((len(spo_list) - 1)/3) == completed:
+						break
+					completed = int((len(spo_list) - 1)/3)
+				# print(completed)
+
 				data_item.extend(spo_list)
 				databuffer.append(data_item)
 				if len(databuffer) % bufferlen == 0:
@@ -158,17 +203,28 @@ def read_samples(path, infiles, outfile, oldcols):
 	db.closeConn()
 
 def main():
-	# test script using the small data in the ./test path
-	path = './counting'
+	
 	infiles = ['dbp_map.csv', 'dbp_raw.csv', 'wd.csv', 'fb.csv']
 	outfile = 'sample.csv'
-	oldcols = ['predicate', 'numeric_10_ptile', 'numeric_90_ptile']
-	newcols = ['s1', 's1_label', 'o1', 'o1_label', 's2', 's2_label', 'o2', 'o2_label', 'p_label']
+	query_limit = 5
+	newcols = []
+	for i in range(0,query_limit):
+		newcols.extend(['s'+str(i+1), 's'+str(i+1)+'_label', 'o'+str(i+1)])
+	newcols.append('p_label')
 
+	oldcols = ['predicate', 'numeric_10_ptile', 'numeric_90_ptile']
+	path = './test'# test script using the small data in the ./test path
 	create_outfile(path, outfile, oldcols, newcols)
-	read_samples(path, infiles, outfile, oldcols)
-	# infiles = ['fb.csv']
-	# read_samples(path, infiles, outfile, oldcols)
+	read_samples(path, infiles, outfile, oldcols, query_limit, 'int')
+	
+	# path = './counting'
+	# create_outfile(path, outfile, oldcols, newcols)
+	# read_samples(path, infiles, outfile, oldcols, query_limit, 'int')
+
+	# path = './enumerating'
+	# oldcols = ['predicate', 'persub_10_ptile_ne', 'persub_90_ptile_ne']
+	# create_outfile(path, outfile, oldcols, newcols)
+	# read_samples(path, ['fb.csv'], outfile, oldcols, query_limit, 'named_entity')
 
 if __name__ == '__main__':
 	main()
