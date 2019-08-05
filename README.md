@@ -10,6 +10,7 @@ Once inside the environment change to `counqer/` and install the required packag
 ```pip install -r requirements.txt```
 
 ### Data setup
+Location: `./datasetup`
 Create a local n-tuple DB from RDF dumps of KBs.
 
 1. `create*<KB-name>*DB.py`
@@ -27,6 +28,7 @@ Create a local n-tuple DB from RDF dumps of KBs.
 	```
 
 ### Crowd task for type identification
+Location: `./classifier_crowd_annotations`
 Sample predicates from candidate KBs to present to the crowd annotators
 
 1. `sql_query_for_set_predicates` has the sql query used to sample data items for counting predicates in the first query
@@ -47,7 +49,22 @@ Sample predicates from candidate KBs to present to the crowd annotators
 	
 	a. Sampled data from each KB is saved in `./enumerating` folder.
 
-**Note** We create a test set containing honey-pot questions for figure-eight task (in `./test` folder). 
+**Note** We create a test set containing honey-pot questions for figure-eight task (in `./test` folder). First we run the `get_labelled_triples.py` on the selected test predicates and then manually edit the `test_rows_figure_eight.csv` file to add the annotations columns (`_golden, *<question>*_gold, *<question>*_gold_reason`).
+
+### Predicate usage features
+Location: `./predicate_usage_features`
+
+1. Download the POS tagger data for nltk.
+```
+$ python
+>>> import nltk
+>>> nltk.download('averaged_perceptron_tagger')
+>>> nltk.pos_tag(nltk.word_tokenize('This is a sentence'))
+```
+
+2. Run `get_estimated_matches.py` to get the predicate usage features from the Bing API for all frequent (>= 50) predicates. Data stored in  
+
+3. Run `get_sub_obj_types.py` 
 
 ### Demo 
 
