@@ -1,4 +1,4 @@
-setwd('Documents/Thesis/counqer/classifier_crowd_annotations')
+setwd('/local/home/shrestha/Documents/Thesis/counqer/classifier_crowd_annotations')
 library(dplyr)
 
 data <- read.csv('counting/Batch_3712921_batch_results.csv')

@@ -115,6 +115,8 @@ def get_spo(db, predicate, kb_name, limit, obj_type, prev_spo_list=[]):
 	count = 0
 	while row is not None:
 		if count >= limit:
+			# fetch all remaining rows
+			cur.fetchall()
 			break
 		s_label = get_label(row[0], kb_name, sparql)
 		# do not use triples without labels
@@ -171,9 +173,10 @@ def populate_fb_labels():
 
 def read_samples(path, infiles, outfile, oldcols, query_limit=5, obj_type='int'):
 	db = DBconn()
+	global fb_label
 	for infile in infiles:
 		kb_name = db.kb_map[infile.split('.csv')[0]]
-		if kb_name is 'freebase_spot':
+		if kb_name is 'freebase_spot' and len(fb_label) == 0:
 			populate_fb_labels()
 		with open(path + '/' + infile) as fp:
 			reader = csv.DictReader(fp)
@@ -212,19 +215,25 @@ def main():
 		newcols.extend(['s'+str(i+1), 's'+str(i+1)+'_label', 'o'+str(i+1)])
 	newcols.append('p_label')
 
-	oldcols = ['predicate', 'numeric_10_ptile', 'numeric_90_ptile']
-	path = './test'# test script using the small data in the ./test path
-	create_outfile(path, outfile, oldcols, newcols)
-	read_samples(path, infiles, outfile, oldcols, query_limit, 'int')
+	################ Counting Predicates
+	# oldcols = ['predicate', 'numeric_10_ptile', 'numeric_90_ptile']
+	# path = './test'# test script using the small data in the ./test path
+	# create_outfile(path, outfile, oldcols, newcols)
+	# read_samples(path, infiles, outfile, oldcols, query_limit, 'int')
 	
 	# path = './counting'
 	# create_outfile(path, outfile, oldcols, newcols)
 	# read_samples(path, infiles, outfile, oldcols, query_limit, 'int')
 
-	# path = './enumerating'
-	# oldcols = ['predicate', 'persub_10_ptile_ne', 'persub_90_ptile_ne']
+	################ Enumerating Predicates
+	oldcols = ['predicate', 'persub_10_ptile_ne', 'persub_90_ptile_ne']
+	# path = './test'# test script using the small data in the ./test path
 	# create_outfile(path, outfile, oldcols, newcols)
-	# read_samples(path, ['fb.csv'], outfile, oldcols, query_limit, 'named_entity')
+	# read_samples(path, infiles, outfile, oldcols, query_limit, 'named_entity')
+
+	path = './enumerating'
+	create_outfile(path, outfile, oldcols, newcols)
+	read_samples(path, infiles, outfile, oldcols, query_limit, 'named_entity')
 
 if __name__ == '__main__':
 	main()
