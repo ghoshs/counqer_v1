@@ -94,7 +94,8 @@ def queryWD_sub(predicate, class_map, sparql):
 			subid.append(value["s"]["value"])
 	for id in subid:
 		query = ('SELECT ?class ?label (count(*) as ?count) WHERE ' 
-				 '{ <' + id + '> wdt:P31/wdt:P279* ?class. '
+				 '{ <' + id + '> wdt:P31 ?instance. '
+				  '?instance wdt:P279* ?class. '
 				  '?class rdfs:label ?label. '
 				  'FILTER (lang(?label)="en") '
 	          	  'FILTER (?class IN (wd:Q5, wd:Q17334923, wd:Q386724, wd:Q43229, wd:Q1656682)) '
@@ -122,7 +123,8 @@ def queryWD_obj(predicate, class_map, sparql):
 	for id in objid:
 		query = ('SELECT ?class ?label (count(*) as ?count) WHERE ' 
 						'{'
-	        			 '<' + id + '> wdt:P31/wdt:P279* ?class. '
+	        			 '<' + id + '> wdt:P31 ?instance. '
+				  		 '?instance wdt:P279* ?class. '
 	          			 '?class rdfs:label ?label. '
 	          			 'FILTER (lang(?label)="en") '
 	          			 'FILTER (?class IN (wd:Q5, wd:Q17334923, wd:Q386724, wd:Q43229, wd:Q1656682)) '
