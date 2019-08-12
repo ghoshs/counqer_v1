@@ -66,6 +66,10 @@ $ python
 
 3. Run `get_sub_obj_types.py` 
 
+### Classifier dataset creation
+Collect data from different sources to create a single feature file of all predicates in the folder `./feature_file`.
+
+
 ### Demo 
 
 The demo is developed in Python using Flask webframework. The site is under contruction and may not exhibit full functionalites of the system. 
