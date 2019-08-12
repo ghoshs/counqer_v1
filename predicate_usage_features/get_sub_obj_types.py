@@ -9,21 +9,24 @@ import multiprocessing
 import time
 from random import randint
 import os
+import psycopg2
 
 global fb_ent_types
 fb_ent_types = {}
 
-def get_FB_types():
+def load_FB_types():
 	global fb_ent_types
 	with open('freebase_ent_types.csv') as fp:
 		reader = csv.reader(fp)
 		next(reader, None)
 		for row in reader:
-			mid = row[0].split('/')[-1]
+			mid = row[0][1:-1].split('/')[-1]
+			keywords = row[1][1:-1].split('/')[-1].split('.')
+			keywords = [' '.join(x.split('_')).lower() for x in keywords]
 			if mid not in fb_ent_types:
-				fb_ent_types[mid] = row[1].split('/')[-1].split('.')
+				fb_ent_types[mid] = keywords
 			else:
-				fb_ent_types[mid].extend(row[1].split('/')[-1].split('.'))
+				fb_ent_types[mid].extend(keywords)
 
 def queryDBP_sub(predicate, sparql):
 	sparql = SPARQLWrapper("http://dbpedia.org/sparql")
@@ -144,6 +147,73 @@ def queryWD_obj(predicate, class_map, sparql):
 			odict[item] += 1
 		return max(odict.items(), key=lambda x: x[1])[0]
 
+def get_conn(kb_name):
+	try:
+		conn = psycopg2.connect("dbname=dbpedia_infoboxes user=ghoshs host=postgres2.d5.mpi-inf.mpg.de password=p0o9i8u7")
+	except Exception as e:
+		print('Cannot connect to DB table due to:',e)
+		return None
+	else:
+		return conn
+
+def get_FB_types(predicate):
+	global fb_ent_types
+	conn = get_conn('freebase')
+	if conn is None:
+		return 'NA','NA'
+	cur = conn.cursor()
+	cur.execute('select distinct sub from freebase_spot where pred=(%s) limit 100',[predicate])
+	row = cur.fetchone()
+	classcount = defaultdict(int)
+	while row is not None:
+		mid = row[0].lower()
+		if mid.startswith(tuple(['http://rdf.freebase.com/ns/m.', 'http://rdf.freebase.com/ns/g.'])) and mid.split('/')[-1] in fb_ent_types:
+			types = fb_ent_types[mid.split('/')[-1]]
+			if 'person' in types:
+				classcount['Person'] += 1
+			elif 'organization' in types:
+				classcount['Organization'] += 1
+			elif 'location' in types:
+				classcount['Place'] += 1
+			elif 'event' in types:
+				classcount['Event'] += 1
+			elif any(x.startswith('work ') for x in types) or any(x.endswith(' work') for x in types) or any(' work ' in x for x in types):
+				classcount['Work'] += 1
+			else:
+				classcount['Thing'] += 1
+		row = cur.fetchone()
+	sorted_classcount = 'Thing' if sum([x[1] for x in sorted_classcount]) == 0 else sorted(classcount.items(), key=operator.itemgetter(1), reverse=True)
+	sub_type = sorted_classcount[0][0]
+
+	cur.execute('select distinct obj from freebase_spot where pred=(%s) limit 100',[predicate])
+	row = cur.fetchone()
+	classcount = defaultdict(int)
+	while row is not None:
+		mid = row[0].lower()
+		if mid.startswith(tuple(['http://rdf.freebase.com/ns/m.', 'http://rdf.freebase.com/ns/g.'])) and mid.split('/')[-1] in fb_ent_types:
+			types = fb_ent_types[mid.split('/')[-1]]
+			if 'person' in types:
+				classcount['Person'] += 1
+			elif 'organization' in types:
+				classcount['Organization'] += 1
+			elif 'location' in types:
+				classcount['Place'] += 1
+			elif 'event' in types:
+				classcount['Event'] += 1
+			elif any(x.startswith('work ') for x in types) or any(x.endswith(' work') for x in types) or any(' work ' in x for x in types):
+				classcount['Work'] += 1
+			else:
+				classcount['Thing'] += 1
+		else:
+			classcount['literal'] += 1
+		row = cur.fetchone()
+	sorted_classcount = sorted(classcount.items(), key=operator.itemgetter(1), reverse=True)
+	obj_type = sorted_classcount[0][0]
+	cur.close()
+	conn.close()
+	return sub_type, obj_type
+
+
 def get_types(predicate, kb_name, dbp_sparql, wd_sparql):
 	# sparql = SPARQLWrapper()
 	if kb_name.startswith('DBP'):
@@ -154,7 +224,7 @@ def get_types(predicate, kb_name, dbp_sparql, wd_sparql):
 		sub_type = queryWD_sub(predicate, class_map, wd_sparql)
 		obj_type = queryWD_obj(predicate, class_map, wd_sparql)
 	elif kb_name == 'FB':
-		return get_FB_types(predicate)
+		sub_type, obj_type = get_FB_types(predicate)
 	else:
 		return {}
 	return {'sub_type': sub_type, 'obj_type': obj_type}
@@ -176,7 +246,7 @@ def main():
 	kb_files_path = '../datasetup/'
 	# kb_files_path = './'
 	# kb_names = ['DBP_map/predfreq_p_all.csv', 'DBP_raw/predfreq_p_all.csv', 'WD/predfreq_p_all.csv', 'FB/predfreq_p_minus_top_5.csv']
-	kb_names = ['WD/predfreq_p_all.csv']
+	kb_names = ['FB/predfreq_p_minus_top_5.csv']
 	outfile = 'sub_obj_types.csv'
 	# resume = False
 
@@ -214,11 +284,11 @@ def main():
 		if kb_name.split('/')[0] == 'FB':
 			load_FB_types()
 
-		for predicate in tqdm(pred_list):
-			types[predicate] = get_types(predicate, kb_name.split('/')[0], dbp_sparql, wd_sparql)
-			write_to_file(types, kb_name.split('/')[0]+outfile)
-			types = {}
-		# Parallel(n_jobs = (num_cores))(delayed(parallel_job)(predicate, kb_name, kb_name.split('/')[0]+outfile, dbp_sparql, wd_sparql) for predicate in tqdm(pred_list))
+		# for predicate in tqdm(pred_list):
+		# 	types[predicate] = get_types(predicate, kb_name.split('/')[0], dbp_sparql, wd_sparql)
+		# 	write_to_file(types, kb_name.split('/')[0]+outfile)
+		# 	types = {}
+		Parallel(n_jobs = (num_cores))(delayed(parallel_job)(predicate, kb_name, kb_name.split('/')[0]+outfile, dbp_sparql, wd_sparql) for predicate in tqdm(pred_list))
 		
 if __name__ == '__main__':
 	main()
