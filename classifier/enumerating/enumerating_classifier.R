@@ -41,12 +41,24 @@ sum(dataE.1$final == 0) ## 198 negatives
 colnames(dataE.1)
 
 dataE.2 <- dataE.1[, c(1:8,14:18,27:31)]
-
+### remove identified outliers
+dataE.2 <- dataE.2[which(!(dataE.2$predicate %in% removeE.outlier)),]
 pairwise_corE <- data.frame(cor(dataE.2[, -c(1, 16, 17)]))
 
-### scale values
+### data imputaion for missing values
+predC.usage_ratio <- dataC.2$plural_est_matches/dataC.2$singular_est_matches
+set.seed(1)
+imputeC <- runif(sum(is.nan(predC.usage_ratio)))*10^-3
+set.seed(1)
+predC.usage_ratio[is.nan(predC.usage_ratio)] <- ifelse(sample(c(0,1), size = sum(is.nan(predC.usage_ratio)), 
+                                                              replace = T, prob = c(0.5, 0.5)) == 1, 
+                                                       1 - imputeC, 1 + imputeC)
+dataC.2$usage_ratio <- predC.usage_ratio
+### imputation by constant
 dataE.2$usage_ratio <- ifelse(dataE.2$singular_est_matches > 0, 
                               dataE.2$plural_est_matches/dataE.2$singular_est_matches, 0)
+
+### scale values
 dataE.2[, c(2, 14, 15)] <- lapply(dataE.2[, c(2, 14, 15)], function(x) log10(x + 10^-5))
 dataE.2[, -c(18)] <- lapply(dataE.2[, -c(18)],  function(x) if (is.numeric(x)) scale(x) else {x})
 
@@ -55,6 +67,13 @@ dataE.2[, -c(18)] <- lapply(dataE.2[, -c(18)],  function(x) if (is.numeric(x)) s
 ### Linear model
 ### remove codependent variables 
 removeE <- c('predicate', 'pcent_unk', 'singular_est_matches', 'plural_est_matches', 'persub_10_ptile', 'persub_avg_ne')
+
+### remove outliers
+dataC.2$predicate[which(dataC.2$usage_ratio > 5)]
+dataC.2$predicate[which(dataC.2$numeric_max > 15)]
+removeC.outlier <- c('http://dbpedia.org/property/truckWins', 'http://dbpedia.org/ontology/virtualChannel', 
+                     'http://dbpedia.org/property/casNumber', 'http://www.wikidata.org/prop/direct/P1181')
+## if removeC.outlier is not empty, remove outliers and rescale data line 46
 
 train.dataE <- dataE.2[!names(dataE.2) %in% removeE]
 linear.modelE <- glm(final~., data=train.dataE, family = binomial)

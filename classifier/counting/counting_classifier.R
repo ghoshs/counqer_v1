@@ -262,27 +262,43 @@ cv.svm.modelC <- tune(svm, y~., data=svm.train.dataC, kernel="radial", scale=F,
 summary(cv.svm.modelC)
 
 ### compare models
-jpeg('classifier/counting/model_comparison_counting', width = 10, height = 10, units = 'in', res=300)
+jpeg('classifier/counting/model_comparison_counting.jpg', width = 10, height = 10, units = 'in', res=300)
 ggplot() + 
     geom_point(data=rocC.linear, aes(x=fpr, y=tpr), fill="blue", color="blue") + 
     geom_smooth(data=rocC.linear, aes(x=fpr, y=tpr), fill="blue", color="blue") + 
+    geom_hline(yintercept = yintercptC.linear, color="blue") + geom_vline(xintercept = xintercptC.linear, color="blue") +
     geom_point(data=rocC.bayesian, aes(x=fpr, y=tpr), fill="red", color="red") + 
     geom_smooth(data=rocC.bayesian, aes(x=fpr, y=tpr), fill="red", color="red") +
+    geom_hline(yintercept = yintercptC.bayesian, color="red") + geom_vline(xintercept = xintercptC.bayesian, color="red") +
     geom_point(data=rocC.neural, aes(x=fpr, y=tpr),  fill="green", color="green") +
     geom_smooth(data=rocC.neural, aes(x=fpr, y=tpr), fill="green", color="green") +
+    geom_hline(yintercept = yintercptC.neural, color="green") + geom_vline(xintercept = xintercptC.neural, color="green") +
     geom_point(data=rocC.lasso, aes(x=fpr, y=tpr),  fill="yellow", color="yellow") + 
-    geom_smooth(data=rocC.lasso, aes(x=fpr, y=tpr), fill="yellow", color="yellow")
+    geom_smooth(data=rocC.lasso, aes(x=fpr, y=tpr), fill="yellow", color="yellow") +
+    geom_hline(yintercept = yintercptC.lasso, color="yellow") + geom_vline(xintercept = xintercptC.lasso, color="yellow")
 dev.off()
 
 
 ### application with best model
-test.dataC <- read.csv('feature_file/predicates_p_50.csv', stringsAsFactors = F, na.strings = "NULL")
+test.dataC <- read.csv('feature_file/predicates_p_50.csv', na.strings = "NULL")
 test.dataC <- test.dataC[, c(1:13,19:23,27:29)]
 test.dataC[is.na(test.dataC)] <- 0
 
+### data imputation for missing values
+predC.usage_ratio.test <- test.dataC$plural_est_matches/test.dataC$singular_est_matches
+predC.usage_ratio.test[is.infinite(predC.usage_ratio.test)] <- NaN
+set.seed(1)
+imputeC.test <- runif(sum(is.nan(predC.usage_ratio.test)))*10^-3
+set.seed(1)
+predC.usage_ratio.test[is.nan(predC.usage_ratio.test)] <- ifelse(sample(c(0,1), size = sum(is.nan(predC.usage_ratio.test)), 
+                                                              replace = T, prob = c(0.5, 0.5)) == 1, 
+                                                       1 - imputeC.test, 1 + imputeC.test)
+test.dataC$usage_ratio <- predC.usage_ratio.test
+# test.dataC$usage_ratio <- ifelse(test.dataC$singular_est_matches > 0, 
+#                                  test.dataC$plural_est_matches/test.dataC$singular_est_matches, 0)
+
 ### scale values
-test.dataC$usage_ratio <- ifelse(test.dataC$singular_est_matches > 0, 
-                              test.dataC$plural_est_matches/test.dataC$singular_est_matches, 0)
+colnames(test.dataC)
 test.dataC[, c(2, 9:13, 19, 20)] <- lapply(test.dataC[, c(2, 9:13, 19, 20)], function(x) log10(x + 10^-5))
 
 test.dataC[] <- lapply(test.dataC, function(x) if (is.numeric(x)) scale(x) else {x})
@@ -299,7 +315,9 @@ lasso.test.dataC <- model.matrix(predicate~., test.dataC)
 predictionsC <- data.frame(matrix(nrow = nrow(test.dataC), ncol = 5))
 colnames(predictionsC) <- c("predicate","linear", "bayesian", "neural", "lasso")
 predictionsC$predicate <- test.dataC$predicate
-predictionsC$linear <- predict(linear.modelC, newdata = test.dataC, type = "response")
-predictionsC$bayesian <- predict(bayesian.modelC, newdata = test.dataC, type="response")
-predictionsC$neural <- compute(nn.modelC, neural.test.dataC)$net.result[,1]
-predictionsC$lasso <- predict(lasso.modelC, s=bestlamC ,newx=lasso.test.dataC)[,1]
+predictionsC$linear <- ifelse(predict(linear.modelC, newdata = test.dataC, type = "response") > thresholdC.linear, 1, 0)
+predictionsC$bayesian <- ifelse(predict(bayesian.modelC, newdata = test.dataC, type="response") > thresholdC.bayesian, 1, 0)
+predictionsC$neural <- ifelse(compute(nn.modelC, neural.test.dataC)$net.result[,1] > thresholdC.neural, 1, 0)
+predictionsC$lasso <- ifelse(predict(lasso.modelC, s=bestlamC ,newx=lasso.test.dataC)[,1] > thresholdC.lasso, 1, 0)
+
+write.csv(predictionsC, 'classifier/counting/predictions.csv', row.names = F)
