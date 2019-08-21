@@ -51,7 +51,7 @@ Sample predicates from candidate KBs to present to the crowd annotators
 
 **Note** We create a test set containing honey-pot questions for figure-eight task (in `./test` folder). First we run the `get_labelled_triples.py` on the selected test predicates and then manually edit the `test_rows_figure_eight.csv` file to add the annotations columns (`_golden, *<question>*_gold, *<question>*_gold_reason`).
 
-### Predicate usage features
+### Predicate usage feature collection
 Location: `./predicate_usage_features`
 
 1. Download the POS tagger data for nltk.
@@ -67,9 +67,13 @@ $ python
 3. Run `get_sub_obj_types.py` 
 
 ### Classifier dataset creation
-Collect data from different sources to create a single feature file of all predicates in the folder `./feature_file`.
+`./pred_property_p_50` has the predicate property files of all KBs with predicate frequency >= 50. Next, we collect data from different sources to create a unified feature file of all predicates (`predicates_p_50.csv`) and the labelled predicates (`labelled_data_counting.csv`, `labelled_data_enumerating.csv`) in the folder `./feature_file` using the script `./create_feature_file.R`.
+
+
+### Classifier training
+
 
 
 ### Demo 
 
-The demo is developed in Python using Flask webframework. The site is under contruction and may not exhibit full functionalites of the system. 
+The demo is developed in Python using Flask webframework and run on an Apache webserver. The site is under contruction and may not exhibit full functionalites of the system. 
