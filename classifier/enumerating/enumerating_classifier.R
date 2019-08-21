@@ -64,16 +64,10 @@ dataE.2[, -c(18)] <- lapply(dataE.2[, -c(18)],  function(x) if (is.numeric(x)) s
 
 ### plot/cor highly correlated variables (> 0.5 or < -0.5) in different ranges
 plot(dataE.2$pcent_comma_sep, dataE.2$pcent_ne)
-plot(dataE.2$persub_avg_ne[which(dataE.2$persub_avg_ne < 2)], dataE.2$persub_10_ptile_ne[which(dataE.2$persub_avg_ne < 2)])
-plot(dataE.2$persub_90_ptile_ne[which(dataE.2$persub_avg_ne < 6)], dataE.2$persub_avg_ne[which(dataE.2$persub_avg_ne < 6)])
-plot(dataE.2$persub_90_ptile_ne[which(dataE.2$persub_90_ptile_ne < 4)], dataE.2$persub_min_ne[which(dataE.2$persub_90_ptile_ne < 4)])
+plot(dataE.2$persub_90_ptile_ne, dataE.2$persub_min_ne)
 
 ### check variable distribution
 ggplot(dataE.2, aes(x=frequency)) + geom_histogram()
-ggplot(dataE.2, aes(y=numeric_max, x=as.factor(final))) + geom_boxplot()
-ggplot(dataE.2, aes(y=numeric_avg, x=as.factor(final))) + geom_boxplot()
-ggplot(dataE.2, aes(y=numeric_10_ptile, x=as.factor(final))) + geom_boxplot()
-ggplot(dataE.2, aes(y=numeric_90_ptile, x=as.factor(final))) + geom_boxplot()
 ggplot(dataE.2, aes(y=usage_ratio, x=as.factor(final))) + geom_boxplot()
 
 ### Linear model
@@ -84,10 +78,11 @@ removeE <- c('predicate', 'pcent_comma_sep', 'pcent_int', 'pcent_float', 'pcent_
 
 ### remove outliers
 dataE.2$predicate[which(dataE.2$usage_ratio > 5)]
-dataE.2$predicate[which(dataE.2$persub_avg_ne > 12)]
-removeE.outlier <- c('http://rdf.freebase.com/ns/astronomy.star_system.planetary_system',
-                     'http://rdf.freebase.com/ns/music.performance_role.track_performances',
-                     'http://rdf.freebase.com/ns/base.thoroughbredracing.thoroughbred_racehorse_color.horses_of_this_color')
+dataE.2$predicate[which(dataE.2$persub_90_ptile_ne > 8)]
+removeE.outlier <- c('http://dbpedia.org/ontology/stateOfOrigin', 'http://dbpedia.org/ontology/headEhef',
+                     'http://dbpedia.org/ontology/principalEngineer', 'http://www.wikidata.org/prop/direct/P3489',
+                     'http://rdf.freebase.com/ns/base.vermont.vermont_fresh_network_partner_type.partner',
+                     'http://rdf.freebase.com/ns/aviation.airline_alliance.member_airlines')
 ## if removeE.outlier is not empty, remove outliers and rescale data line 46
 
 train.dataE <- dataE.2[!names(dataE.2) %in% removeE]
@@ -102,8 +97,14 @@ thresholdE <- seq(0,1,0.01)
 respE.linear <- get_response_df(thresholdE, train.dataE, linear.probE)
 rocE.linear <- get_roc_df(thresholdE, respE.linear)
 
-ggplot(rocE.linear, aes(x=fpr, y=tpr)) + geom_point()
 thresholdE.linear <- rocE.linear$threshold[which(rocE.linear$distance == min(rocE.linear$distance))][1]
+# 0.4
+jpeg('classifier/enumerating/linear_enumerating.jpg', width = 10, height = 10, units = 'in', res=300)
+yintercptE.linear <- rocE.linear$tpr[which(rocE.linear$threshold == thresholdE.linear)]
+xintercptE.linear <- rocE.linear$fpr[which(rocE.linear$threshold == thresholdE.linear)]
+ggplot(rocE.linear, aes(x=fpr, y=tpr)) + geom_point() + geom_smooth() + 
+  geom_hline(yintercept = yintercptE.linear) + geom_vline(xintercept = xintercptE.linear)
+dev.off()
 
 ### Loocv stats
 loocvE.linear = rep(0,nrow(train.dataE))
@@ -138,6 +139,14 @@ rocE.bayesian <- get_roc_df(thresholdE, respE.bayesian)
 
 ggplot(rocE.bayesian, aes(x=fpr, y=tpr)) + geom_point()
 thresholdE.bayesian <- rocE.bayesian$threshold[which(rocE.bayesian$distance == min(rocE.bayesian$distance))][1]
+#0.41
+jpeg('classifier/enumerating/bayesian_enumerating.jpg', width = 10, height = 10, units = 'in', res=300)
+yintercptE.bayesian <- rocE.bayesian$tpr[which(rocE.bayesian$threshold == thresholdE.bayesian)]
+xintercptE.bayesian <- rocE.bayesian$fpr[which(rocE.bayesian$threshold == thresholdE.bayesian)]
+ggplot(rocE.bayesian, aes(x=fpr, y=tpr)) + geom_point() + geom_smooth() + 
+  geom_hline(yintercept = yintercptE.bayesian) + geom_vline(xintercept = xintercptE.bayesian)
+dev.off()
+
 
 ### Loocv stats
 loocvE.bayesian = rep(0,nrow(train.dataE))
@@ -173,8 +182,14 @@ thresholdE <- seq(0,1,0.01)
 respE.neural <- get_response_df(thresholdE, neural.train.dataE, neural.probE[,1])
 rocE.neural <- get_roc_df(thresholdE, respE.neural)
 
-ggplot(rocE.neural, aes(x=fpr, y=tpr)) + geom_point()
 thresholdE.neural <- rocE.neural$threshold[which(rocE.neural$distance == min(rocE.neural$distance))][1]
+# 0.43
+jpeg('classifier/enumerating/neural_enumerating.jpg', width = 10, height = 10, units = 'in', res=300)
+yintercptE.neural <- rocE.neural$tpr[which(rocE.neural$threshold == thresholdE.neural)]
+xintercptE.neural <- rocE.neural$fpr[which(rocE.neural$threshold == thresholdE.neural)]
+ggplot(rocE.neural, aes(x=fpr, y=tpr)) + geom_point() + geom_smooth() + 
+  geom_hline(yintercept = yintercptE.neural) + geom_vline(xintercept = xintercptE.neural)
+dev.off()
 
 ### Loocv stats
 conf_matrixE.neural <- table(ifelse(neural.probE > thresholdE.neural, 1, 0), neural.train.dataE$final)
@@ -202,9 +217,14 @@ thresholdE <- seq(0,1,0.01)
 respE.lasso <- get_response_df(thresholdE, train.dataE, lasso.probE[,1])
 rocE.lasso <- get_roc_df(thresholdE, respE.lasso)
 
-ggplot(rocE.lasso, aes(x=fpr, y=tpr)) + geom_point()
 thresholdE.lasso <- rocE.lasso$threshold[which(rocE.lasso$distance == min(rocE.lasso$distance))][1]
-#0.11
+#0.4
+jpeg('classifier/enumerating/lasso_enumerating.jpg', width = 10, height = 10, units = 'in', res=300)
+yintercptE.lasso <- rocE.lasso$tpr[which(rocE.lasso$threshold == thresholdE.lasso)]
+xintercptE.lasso <- rocE.lasso$fpr[which(rocE.lasso$threshold == thresholdE.lasso)]
+ggplot(rocE.lasso, aes(x=fpr, y=tpr)) + geom_point() + geom_smooth() + 
+  geom_hline(yintercept = yintercptE.lasso) + geom_vline(xintercept = xintercptE.lasso)
+dev.off()
 
 ### Loocv stats
 loocvE.lasso = rep(0,nrow(train.dataE))
@@ -222,32 +242,53 @@ conf_matrixE.lasso["1","1"]/sum(train.dataE$final == 1) #recall
 conf_matrixE.lasso["1","1"]/(conf_matrixE.lasso["1","0"] + conf_matrixE.lasso["1","1"]) #precision
 
 ### compare models
-jpeg('classifier/enumerating/model_comparison_enumerating.jpg', width = 10, height = 4, units = 'in', res=300)
+jpeg('classifier/enumerating/model_comparison_enumerating.jpg', width = 10, height = 10, units = 'in', res=300)
 ggplot() + 
   geom_point(data=rocE.linear, aes(x=fpr, y=tpr), fill="blue", color="blue") + 
-  geom_smooth(data=rocE.linear, aes(x=fpr, y=tpr), fill="blue", color="blue") +
+  geom_smooth(data=rocE.linear, aes(x=fpr, y=tpr), fill="blue", color="blue") + 
+  geom_hline(yintercept = yintercptE.linear, color="blue") + geom_vline(xintercept = xintercptE.linear, color="blue") +
   geom_point(data=rocE.bayesian, aes(x=fpr, y=tpr), fill="red", color="red") + 
   geom_smooth(data=rocE.bayesian, aes(x=fpr, y=tpr), fill="red", color="red") +
-  geom_point(data=rocE.neural, aes(x=fpr, y=tpr),  fill="green", color="green") + 
-  geom_smooth(data=rocE.neural, aes(x=fpr, y=tpr), fill="green", color="green") + 
+  geom_hline(yintercept = yintercptE.bayesian, color="red") + geom_vline(xintercept = xintercptE.bayesian, color="red") +
+  geom_point(data=rocE.neural, aes(x=fpr, y=tpr),  fill="green", color="green") +
+  geom_smooth(data=rocE.neural, aes(x=fpr, y=tpr), fill="green", color="green") +
+  geom_hline(yintercept = yintercptE.neural, color="green") + geom_vline(xintercept = xintercptE.neural, color="green") +
   geom_point(data=rocE.lasso, aes(x=fpr, y=tpr),  fill="yellow", color="yellow") + 
-  geom_smooth(data=rocE.lasso, aes(x=fpr, y=tpr), fill="yellow", color="yellow")
+  geom_smooth(data=rocE.lasso, aes(x=fpr, y=tpr), fill="yellow", color="yellow") +
+  geom_hline(yintercept = yintercptE.lasso, color="yellow") + geom_vline(xintercept = xintercptE.lasso, color="yellow")
 dev.off()
 
 ### application with best model
-test.dataE <- read.csv('feature_file/predicates_p_50.csv', stringsAsFactors = F, na.strings = "NULL")
+test.dataE <- read.csv('feature_file/predicates_p_50.csv', na.strings = "NULL")
 test.dataE <- test.dataE[, c(1:8,14:18,27:30)]
 test.dataE[is.na(test.dataE)] <- 0
 
+### data imputation for missing values
+predE.usage_ratio.test <- test.dataE$plural_est_matches/test.dataE$singular_est_matches
+predE.usage_ratio.test[is.infinite(predE.usage_ratio.test)] <- NaN
+set.seed(1)
+imputeE.test <- runif(sum(is.nan(predE.usage_ratio.test)))*10^-3
+set.seed(1)
+predE.usage_ratio.test[is.nan(predE.usage_ratio.test)] <- ifelse(sample(c(0,1), size = sum(is.nan(predE.usage_ratio.test)), 
+                                                                        replace = T, prob = c(0.5, 0.5)) == 1, 
+                                                                 1 - imputeE.test, 1 + imputeE.test)
+test.dataE$usage_ratio <- predE.usage_ratio.test
+# test.dataE$usage_ratio <- ifelse(test.dataE$singular_est_matches > 0, 
+#                                  test.dataE$plural_est_matches/test.dataE$singular_est_matches, 0)
+
 ### scale values
-test.dataE$usage_ratio <- ifelse(test.dataE$singular_est_matches > 0, 
-                                 test.dataE$plural_est_matches/test.dataE$singular_est_matches, 0)
 test.dataE[, c(2, 14, 15)] <- lapply(test.dataE[, c(2, 14, 15)], function(x) log10(x + 10^-5))
 test.dataE[] <- lapply(test.dataE,  function(x) if (is.numeric(x)) scale(x) else {x})
-# pairwise_corC.2 <- data.frame(cor(dataC.2[, -c(1, 21)]))
+# pairwise_corE.2 <- data.frame(cor(dataE.2[, -c(1, 21)]))
+
+### replace bnode by thing in sub_type and literal in obj_type
+test.dataE$obj_type[which(test.dataE$obj_type == 'bnode')] <- "literal"
+test.dataE$obj_type <- factor(test.dataE$obj_type)
 
 ### remove codependent variables 
-removeE <- c('pcent_unk', 'singular_est_matches', 'plural_est_matches', 'persub_10_ptile', 'persub_avg_ne')
+removeE <- c('pcent_comma_sep', 'pcent_int', 'pcent_float', 'pcent_date', 'pcent_unk', 
+             'singular_est_matches', 'plural_est_matches', 
+             'persub_min_ne', 'persub_10_ptile_ne', 'persub_avg_ne')
 test.dataE <- test.dataE[!names(test.dataE) %in% removeE]
 neural.test.dataE <- test.dataE %>% mutate(temp = 1) %>% spread(sub_type, temp, fill=0)
 neural.test.dataE <- neural.test.dataE %>% mutate(temp = 1) %>% spread(obj_type, temp, fill=0)
@@ -256,7 +297,9 @@ lasso.test.dataE <- model.matrix(predicate~., test.dataE)
 predictionsE <- data.frame(matrix(nrow = nrow(test.dataE), ncol = 5))
 colnames(predictionsE) <- c("predicate","linear", "bayesian", "neural", "lasso")
 predictionsE$predicate <- test.dataE$predicate
-predictionsE$linear <- predict(linear.modelE, newdata = test.dataE, type = "response")
-predictionsE$bayesian <- predict(bayesian.modelE, newdata = test.dataE, type="response")
-predictionsE$neural <- compute(nn.modelE, neural.test.dataE)$net.result[,1]
-predictionsE$lasso <- predict(lasso.modelE, s=bestlamE, newx=lasso.test.dataE)[,1]
+predictionsE$linear <- ifelse(predict(linear.modelE, newdata = test.dataE, type = "response") > thresholdE.linear, 1, 0)
+predictionsE$bayesian <- ifelse(predict(bayesian.modelE, newdata = test.dataE, type="response") > thresholdE.bayesian, 1, 0)
+predictionsE$neural <- ifelse(compute(nn.modelE, neural.test.dataE)$net.result[,1] > thresholdE.neural, 1, 0)
+predictionsE$lasso <- ifelse(predict(lasso.modelE, s=bestlamE, newx=lasso.test.dataE)[,1] > thresholdE.lasso, 1, 0)
+
+write.csv(predictionsE, 'classifier/enumerating/predictions.csv', row.names = F)
