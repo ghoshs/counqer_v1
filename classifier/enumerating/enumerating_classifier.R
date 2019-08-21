@@ -46,34 +46,49 @@ dataE.2 <- dataE.2[which(!(dataE.2$predicate %in% removeE.outlier)),]
 pairwise_corE <- data.frame(cor(dataE.2[, -c(1, 16, 17)]))
 
 ### data imputaion for missing values
-predC.usage_ratio <- dataC.2$plural_est_matches/dataC.2$singular_est_matches
+predE.usage_ratio <- dataE.2$plural_est_matches/dataE.2$singular_est_matches
 set.seed(1)
-imputeC <- runif(sum(is.nan(predC.usage_ratio)))*10^-3
+imputeE <- runif(sum(is.nan(predE.usage_ratio)))*10^-3
 set.seed(1)
-predC.usage_ratio[is.nan(predC.usage_ratio)] <- ifelse(sample(c(0,1), size = sum(is.nan(predC.usage_ratio)), 
+predE.usage_ratio[is.nan(predE.usage_ratio)] <- ifelse(sample(c(0,1), size = sum(is.nan(predE.usage_ratio)), 
                                                               replace = T, prob = c(0.5, 0.5)) == 1, 
-                                                       1 - imputeC, 1 + imputeC)
-dataC.2$usage_ratio <- predC.usage_ratio
+                                                       1 - imputeE, 1 + imputeE)
+dataE.2$usage_ratio <- predE.usage_ratio
 ### imputation by constant
-dataE.2$usage_ratio <- ifelse(dataE.2$singular_est_matches > 0, 
-                              dataE.2$plural_est_matches/dataE.2$singular_est_matches, 0)
+# dataE.2$usage_ratio <- ifelse(dataE.2$singular_est_matches > 0, 
+#                               dataE.2$plural_est_matches/dataE.2$singular_est_matches, 0)
 
 ### scale values
 dataE.2[, c(2, 14, 15)] <- lapply(dataE.2[, c(2, 14, 15)], function(x) log10(x + 10^-5))
 dataE.2[, -c(18)] <- lapply(dataE.2[, -c(18)],  function(x) if (is.numeric(x)) scale(x) else {x})
 
 ### plot/cor highly correlated variables (> 0.5 or < -0.5) in different ranges
+plot(dataE.2$pcent_comma_sep, dataE.2$pcent_ne)
+plot(dataE.2$persub_avg_ne[which(dataE.2$persub_avg_ne < 2)], dataE.2$persub_10_ptile_ne[which(dataE.2$persub_avg_ne < 2)])
+plot(dataE.2$persub_90_ptile_ne[which(dataE.2$persub_avg_ne < 6)], dataE.2$persub_avg_ne[which(dataE.2$persub_avg_ne < 6)])
+plot(dataE.2$persub_90_ptile_ne[which(dataE.2$persub_90_ptile_ne < 4)], dataE.2$persub_min_ne[which(dataE.2$persub_90_ptile_ne < 4)])
+
+### check variable distribution
+ggplot(dataE.2, aes(x=frequency)) + geom_histogram()
+ggplot(dataE.2, aes(y=numeric_max, x=as.factor(final))) + geom_boxplot()
+ggplot(dataE.2, aes(y=numeric_avg, x=as.factor(final))) + geom_boxplot()
+ggplot(dataE.2, aes(y=numeric_10_ptile, x=as.factor(final))) + geom_boxplot()
+ggplot(dataE.2, aes(y=numeric_90_ptile, x=as.factor(final))) + geom_boxplot()
+ggplot(dataE.2, aes(y=usage_ratio, x=as.factor(final))) + geom_boxplot()
 
 ### Linear model
 ### remove codependent variables 
-removeE <- c('predicate', 'pcent_unk', 'singular_est_matches', 'plural_est_matches', 'persub_10_ptile', 'persub_avg_ne')
+removeE <- c('predicate', 'pcent_comma_sep', 'pcent_int', 'pcent_float', 'pcent_date', 'pcent_unk', 
+             'singular_est_matches', 'plural_est_matches', 
+             'persub_min_ne', 'persub_10_ptile_ne', 'persub_avg_ne')
 
 ### remove outliers
-dataC.2$predicate[which(dataC.2$usage_ratio > 5)]
-dataC.2$predicate[which(dataC.2$numeric_max > 15)]
-removeC.outlier <- c('http://dbpedia.org/property/truckWins', 'http://dbpedia.org/ontology/virtualChannel', 
-                     'http://dbpedia.org/property/casNumber', 'http://www.wikidata.org/prop/direct/P1181')
-## if removeC.outlier is not empty, remove outliers and rescale data line 46
+dataE.2$predicate[which(dataE.2$usage_ratio > 5)]
+dataE.2$predicate[which(dataE.2$persub_avg_ne > 12)]
+removeE.outlier <- c('http://rdf.freebase.com/ns/astronomy.star_system.planetary_system',
+                     'http://rdf.freebase.com/ns/music.performance_role.track_performances',
+                     'http://rdf.freebase.com/ns/base.thoroughbredracing.thoroughbred_racehorse_color.horses_of_this_color')
+## if removeE.outlier is not empty, remove outliers and rescale data line 46
 
 train.dataE <- dataE.2[!names(dataE.2) %in% removeE]
 linear.modelE <- glm(final~., data=train.dataE, family = binomial)
