@@ -87,7 +87,7 @@ Random Classifier performance:
 
 1. Counting: 345 data points, 39 positive, 306 negative
 
-|	   | Predicted |	|
+|	   | Predicted ||	|
 |------|-----------|----|
 |Actual|  0  |  1  |	|
 |------|-----------|----|
@@ -100,7 +100,7 @@ Random Classifier performance:
 
 2. Enumerating: 328 data points, 133 positive, 195 negative
 
-|	   | Predicted |	|
+|	   | Predicted ||	|
 |------|-----------|----|
 |Actual|  0  |  1  |	|
 |------|-----------|----|
