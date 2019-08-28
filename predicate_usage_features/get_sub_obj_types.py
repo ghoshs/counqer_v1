@@ -171,8 +171,8 @@ def get_FB_types(predicate):
 			types = fb_ent_types[mid.split('/')[-1]]
 			if 'person' in types:
 				classcount['Person'] += 1
-			elif 'organization' in types:
-				classcount['Organization'] += 1
+			elif 'organization' in types or 'organisation' in types:
+				classcount['Organisation'] += 1
 			elif 'location' in types:
 				classcount['Place'] += 1
 			elif 'event' in types:
@@ -182,8 +182,8 @@ def get_FB_types(predicate):
 			else:
 				classcount['Thing'] += 1
 		row = cur.fetchone()
-	sorted_classcount = 'Thing' if sum([x[1] for x in sorted_classcount]) == 0 else sorted(classcount.items(), key=operator.itemgetter(1), reverse=True)
-	sub_type = sorted_classcount[0][0]
+	sorted_classcount = sorted(classcount.items(), key=operator.itemgetter(1), reverse=True)
+	sub_type = 'Thing' if sum([x[1] for x in sorted_classcount]) == 0 else sorted_classcount[0][0]
 
 	cur.execute('select distinct obj from freebase_spot where pred=(%s) limit 100',[predicate])
 	row = cur.fetchone()
@@ -194,8 +194,8 @@ def get_FB_types(predicate):
 			types = fb_ent_types[mid.split('/')[-1]]
 			if 'person' in types:
 				classcount['Person'] += 1
-			elif 'organization' in types:
-				classcount['Organization'] += 1
+			elif 'organization' in types or 'organisation' in types:
+				classcount['Organisation'] += 1
 			elif 'location' in types:
 				classcount['Place'] += 1
 			elif 'event' in types:
@@ -245,8 +245,8 @@ def main():
 	# path for KB predicates
 	kb_files_path = '../datasetup/'
 	# kb_files_path = './'
-	# kb_names = ['DBP_map/predfreq_p_all.csv', 'DBP_raw/predfreq_p_all.csv', 'WD/predfreq_p_all.csv', 'FB/predfreq_p_minus_top_5.csv']
-	kb_names = ['FB/predfreq_p_minus_top_5.csv']
+	kb_names = ['DBP_map/predfreq_p_all.csv', 'DBP_raw/predfreq_p_all.csv', 'WD/predfreq_p_all.csv', 'FB/predfreq_p_minus_top_5.csv']
+	# kb_names = ['FB/predfreq_p_minus_top_5.csv']
 	outfile = 'sub_obj_types.csv'
 	# resume = False
 
@@ -284,11 +284,11 @@ def main():
 		if kb_name.split('/')[0] == 'FB':
 			load_FB_types()
 
-		# for predicate in tqdm(pred_list):
-		# 	types[predicate] = get_types(predicate, kb_name.split('/')[0], dbp_sparql, wd_sparql)
-		# 	write_to_file(types, kb_name.split('/')[0]+outfile)
-		# 	types = {}
-		Parallel(n_jobs = (num_cores))(delayed(parallel_job)(predicate, kb_name, kb_name.split('/')[0]+outfile, dbp_sparql, wd_sparql) for predicate in tqdm(pred_list))
+		for predicate in tqdm(pred_list):
+			types[predicate] = get_types(predicate, kb_name.split('/')[0], dbp_sparql, wd_sparql)
+			write_to_file(types, kb_name.split('/')[0]+outfile)
+			types = {}
+		# Parallel(n_jobs = (num_cores))(delayed(parallel_job)(predicate, kb_name, kb_name.split('/')[0]+outfile, dbp_sparql, wd_sparql) for predicate in tqdm(pred_list))
 		
 if __name__ == '__main__':
 	main()

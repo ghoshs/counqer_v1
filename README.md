@@ -71,8 +71,119 @@ $ python
 
 
 ### Classifier training
+Location: `./classifier`
 
+We have two classifiers - one for counting and one for enumerating in `.../*<type>*/*<type>*_classifier.R`. 
+Classifier models used - 
 
+1. Logistic regression
+2. Bayesian glm
+3. Lasso regression
+4. Neural network with single hidden layer
+
+The predictions are saved in `.../*<type>*/predictions.csv`.
+
+Random Classifier performance:
+
+1. Counting: 345 data points, 39 positive, 306 negative
+
+	  | Predicted |
+	  |-----------|
+Actual|  0  |  1  |
+	  |-----------|----
+	0 | 272 | 34  |306
+	1 | 34  |  5  |39
+	--|-----------|----
+	  | 306 | 39  |345
+
+	 Precision = Recall = F1 = 12.8%	
+
+2. Enumerating: 328 data points, 133 positive, 195 negative
+
+	  | Predicted |
+	  |-----------|
+Actual|  0  |  1  |
+	  |-----------|----
+	0 | 116 | 79  |195
+	1 | 79  | 54  |133
+	--|-----------|----
+	  | 195 | 133 |328
+
+	 Precision = Recall = F1 = 40.6%
+
+Precision Recall scores of all models
+
+|Model 		|Precision     |Recall      | <- Counting
+|-----------|--------------|------------|
+|Random     | 12.8         | 12.8       |
+|Logistic   | 51.2         | 19.0       |
+|Bayesian   | 48.7         | 20.2       |
+|Lasso      | 71.7         | 23.3       |
+|Neural     | 28.0         | 20.0       |
+|-----------|--------------|------------|
+
+|Model 		|Precision     |Recall      | <- Enumerating
+|-----------|--------------|------------|
+|Random     | 40.6         | 40.6       |
+|Logistic   | 55.6         | 51.7       |
+|Bayesian   | 55.6         | 51.7       |
+|Lasso      | 51.1         | 63.1       |
+|Neural     | 65.0         | 50.0       |
+|-----------|--------------|------------|
+
+### Alignment metrics computation
+Location: `./alignment`
+
+1.  Create a csv file with entity names across different platforms.
+
+	a. DBpedia entity: http://dbpedia.org/resource/*<entity>* 
+	b. Wikidata entity: http://www.wikidata.org/entity/*<entity>*
+
+	`shorten_entity_names.py` - remove url prefic which identifies the KB.
+
+	`get_sameAs_dbpedia.py` - for all unique entities collected from KB and shortened, get the corresponting entity identities in other KBs (namely, Wikidata and Freebase).
+
+2. Get the two predicate lists from `get_predicate_list.R`.
+
+3. Get the number of entities per subject per predicate information from KB query using psql.
+
+	a. Enumerating
+
+	```psql
+	\copy (Select sub, pred, count(*) from *<kb-name>* where obj_type='named_entity' group by pred, sub order by pred) to 'filepath/named_entities_by_pred_by_sub_*<kb>*.csv' with CSV;
+	``` 
+
+	Since Freebase has 700k predicates, modify above query by filtering only top frequently occurring predicates.
+	```psql
+	\copy (Select sub, pred, count(*) from freebase_spot where pred in (*<list from file fb_pred_names_p_50>*) obj_type='named_entity' group by pred, sub order by pred) to 'filepath/named_entities_per_pred_per_sub_*<kb>*.csv' with CSV;
+	``` 
+	Stored in DB server as a table with name `*<kb-name>*_sub_pred_necount`.
+
+	b. Counting
+
+	```psql
+	\copy (Select sub, pred, obj from freebase_spot where pred in (*<list from file fb_pred_names_p_50>*) and obj_type='int' order by pred, sub) to '/GW/D5data-11/existential-extraction/count_information/integer_per_pred_per_sub_fb.csv' with CSV;
+	``` 
+	Stored in DB server as a table with name `*<kb-name>*_sub_pred_intval`.
+		
+
+4. Create a view of triples in each kb having p_50 predicates. 
+	`create view *<kb_name>*_p_50 as select * from *<kb-name>*_spot where pred in (*<list from file kb_pred_names_p_50>*)`
+
+5. Get co-occurrence statistics on the generated view. Store co-occuring pairs (predE, predC, #co-occurring subjects) in `./cooccurrence/*<kb-name>*_predicate_pairs.csv`.
+	``` psql
+	select t1.pred as predE, t2.pred as predC, count(*) from
+		(select * from *<kb_name>*_p_50 where obj_type='named_entity') as t1
+		inner join
+		(select * from *<kb_name>*_p_50 where obj_type='int') as t2
+	on t1.sub = t2.sub
+	group by t1.pred, t2.pred
+	```
+	*Note* This is not time-efficient for the Freebase KB. Use instead
+	```select t1.pred as predE, t2.pred as predC, count(*) from fb_sub_pred_necount as t1 inner join fb_sub_pred_intval as t2 on t1.sub = t2.sub group by t1.pred, t2.pred
+	```
+
+6. Get predicate marginals (#subjects per predicate) in files labelled `./marginals/*<kb-name>*_int.csv` for counting predicate marginals and `./marginals/*<kb-name>*_ne.csv` for enumerating predicate marginals.
 
 ### Demo 
 

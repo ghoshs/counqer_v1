@@ -205,7 +205,15 @@ ggplot(rocC.neural, aes(x=fpr, y=tpr)) + geom_point() + geom_smooth() +
 dev.off()
 
 ### Loocv stats
-conf_matrixC.neural <- table(ifelse(neural.probC > thresholdC.neural, 1, 0), neural.train.dataC$final)
+loocvC.neural = rep(0,nrow(train.dataC))
+set.seed(12)
+train <- seq(1, nrow(train.dataC))
+for (i in 1:nrow(train.dataC)){
+    tr <- train[train!=i]
+    nn.fit = neuralnet(final~., data=neural.train.dataC[tr,], hidden=3, act.fct = "logistic", linear.output = F)
+    loocvC.neural[i] = ifelse(compute(nn.fit, neural.train.dataC)$net.result[-tr,1] > thresholdC.neural, 1, 0)
+}
+conf_matrixC.neural <- table(ifelse(loocvC.neural > thresholdC.neural, 1, 0), neural.train.dataC$final)
 conf_matrixC.neural["1","1"]/sum(neural.train.dataC$final == 1) #recall
 conf_matrixC.neural["1","1"]/(conf_matrixC.neural["1","0"] + conf_matrixC.neural["1","1"]) #precision
 

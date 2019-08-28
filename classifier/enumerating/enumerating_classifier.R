@@ -74,7 +74,7 @@ ggplot(dataE.2, aes(y=usage_ratio, x=as.factor(final))) + geom_boxplot()
 ### remove codependent variables 
 removeE <- c('predicate', 'pcent_comma_sep', 'pcent_int', 'pcent_float', 'pcent_date', 'pcent_unk', 
              'singular_est_matches', 'plural_est_matches', 
-             'persub_min_ne', 'persub_10_ptile_ne', 'persub_avg_ne')
+             'persub_max_ne', 'persub_min_ne', 'persub_10_ptile_ne', 'persub_avg_ne')
 
 ### remove outliers
 dataE.2$predicate[which(dataE.2$usage_ratio > 5)]
@@ -137,7 +137,6 @@ thresholdE <- seq(0,1,0.01)
 respE.bayesian <- get_response_df(thresholdE, train.dataE, bayesian.probE)
 rocE.bayesian <- get_roc_df(thresholdE, respE.bayesian)
 
-ggplot(rocE.bayesian, aes(x=fpr, y=tpr)) + geom_point()
 thresholdE.bayesian <- rocE.bayesian$threshold[which(rocE.bayesian$distance == min(rocE.bayesian$distance))][1]
 #0.41
 jpeg('classifier/enumerating/bayesian_enumerating.jpg', width = 10, height = 10, units = 'in', res=300)
@@ -192,11 +191,19 @@ ggplot(rocE.neural, aes(x=fpr, y=tpr)) + geom_point() + geom_smooth() +
 dev.off()
 
 ### Loocv stats
-conf_matrixE.neural <- table(ifelse(neural.probE > thresholdE.neural, 1, 0), neural.train.dataE$final)
+loocvE.neural = rep(0,nrow(train.dataE))
+set.seed(12)
+train <- seq(1, nrow(train.dataE))
+for (i in 1:nrow(train.dataE)){
+  tr <- train[train!=i]
+  nn.fit = neuralnet(final~., data=neural.train.dataE[tr,], hidden=3, act.fct = "logistic", linear.output = F)
+  loocvE.neural[i] = ifelse(compute(nn.fit, neural.train.dataE)$net.result[-tr,1] > thresholdE.neural, 1, 0)
+}
+conf_matrixE.neural <- table(ifelse(loocvE.neural > thresholdE.neural, 1, 0), neural.train.dataE$final)
 conf_matrixE.neural["1","1"]/sum(neural.train.dataE$final == 1) #recall
 conf_matrixE.neural["1","1"]/(conf_matrixE.neural["1","0"] + conf_matrixE.neural["1","1"]) #precision
 
-### Lasso
+  ### Lasso
 library(glmnet)
 grid =10^seq(10,-2, length =100)
 x <- model.matrix(final~., train.dataE)
@@ -288,7 +295,7 @@ test.dataE$obj_type <- factor(test.dataE$obj_type)
 ### remove codependent variables 
 removeE <- c('pcent_comma_sep', 'pcent_int', 'pcent_float', 'pcent_date', 'pcent_unk', 
              'singular_est_matches', 'plural_est_matches', 
-             'persub_min_ne', 'persub_10_ptile_ne', 'persub_avg_ne')
+             'persub_max_ne', 'persub_min_ne', 'persub_10_ptile_ne', 'persub_avg_ne')
 test.dataE <- test.dataE[!names(test.dataE) %in% removeE]
 neural.test.dataE <- test.dataE %>% mutate(temp = 1) %>% spread(sub_type, temp, fill=0)
 neural.test.dataE <- neural.test.dataE %>% mutate(temp = 1) %>% spread(obj_type, temp, fill=0)
