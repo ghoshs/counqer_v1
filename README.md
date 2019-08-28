@@ -87,33 +87,34 @@ Random Classifier performance:
 
 1. Counting: 345 data points, 39 positive, 306 negative
 
-	  | Predicted |
-	  |-----------|
-Actual|  0  |  1  |
-	  |-----------|----
-	0 | 272 | 34  |306
-	1 | 34  |  5  |39
-	--|-----------|----
-	  | 306 | 39  |345
+|	   | Predicted |
+|	   |-----------|
+|Actual|  0  |  1  |
+|------|-----------|----
+|	0  | 272 | 34  |306
+|	1  | 34  |  5  |39
+|------|-----------|----
+|	   | 306 | 39  |345
 
 	 Precision = Recall = F1 = 12.8%	
 
 2. Enumerating: 328 data points, 133 positive, 195 negative
 
-	  | Predicted |
-	  |-----------|
-Actual|  0  |  1  |
-	  |-----------|----
-	0 | 116 | 79  |195
-	1 | 79  | 54  |133
-	--|-----------|----
-	  | 195 | 133 |328
+|	   | Predicted |
+|	   |-----------|
+|Actual|  0  |  1  |
+|------|-----------|----
+|	0  | 116 | 79  |195
+|	1  | 79  | 54  |133
+|------|-----------|----
+|	   | 195 | 133 |328
 
 	 Precision = Recall = F1 = 40.6%
 
 Precision Recall scores of all models
+a. Counting
 
-|Model 		|Precision     |Recall      | <- Counting
+|Model 		|Precision     |Recall      | 
 |-----------|--------------|------------|
 |Random     | 12.8         | 12.8       |
 |Logistic   | 51.2         | 19.0       |
@@ -122,7 +123,9 @@ Precision Recall scores of all models
 |Neural     | 28.0         | 20.0       |
 |-----------|--------------|------------|
 
-|Model 		|Precision     |Recall      | <- Enumerating
+b. Enumerating
+
+|Model 		|Precision     |Recall      | 
 |-----------|--------------|------------|
 |Random     | 40.6         | 40.6       |
 |Logistic   | 55.6         | 51.7       |
