@@ -110,7 +110,7 @@ Random Classifier performance:
 Precision Recall scores of all models
 a. Counting
 
-|Model 		|Precision     |Recall      | 
+|Model 		|Recall		   |Precision   | 
 |-----------|--------------|------------|
 |Random     | 12.8         | 12.8       |
 |Logistic   | 51.2         | 19.0       |
@@ -120,7 +120,7 @@ a. Counting
 
 b. Enumerating
 
-|Model 		|Precision     |Recall      | 
+|Model 		|Recall		   |Precision   | 
 |-----------|--------------|------------|
 |Random     | 40.6         | 40.6       |
 |Logistic   | 55.6         | 51.7       |
@@ -147,7 +147,7 @@ Location: `./alignment`
 	a. Enumerating
 
 	```psql
-	\copy (Select sub, pred, count(*) from *<kb-name>* where obj_type='named_entity' group by pred, sub order by pred) to 'filepath/named_entities_by_pred_by_sub_*<kb>*.csv' with CSV;
+	\copy (Select sub, pred, count(*) from *<kb-name>* where obj_type='named_entity' group by pred, sub order by pred) to 'filepath/named_entities_per_pred_per_sub_*<kb>*.csv' with CSV;
 	``` 
 
 	Since Freebase has 700k predicates, modify above query by filtering only top frequently occurring predicates.
@@ -163,24 +163,40 @@ Location: `./alignment`
 	``` 
 	Stored in DB server as a table with name `*<kb-name>*_sub_pred_intval`.
 		
+	**Note** Create indexes on the predicate column.
 
 4. Create a view of triples in each kb having p_50 predicates. 
 	`create view *<kb_name>*_p_50 as select * from *<kb-name>*_spot where pred in (*<list from file kb_pred_names_p_50>*)`
 
 5. Get co-occurrence statistics on the generated view. Store co-occuring pairs (predE, predC, #co-occurring subjects) in `./cooccurrence/*<kb-name>*_predicate_pairs.csv`.
-	``` psql
-	select t1.pred as predE, t2.pred as predC, count(*) from
+	~~``` psql
+	select t1.pred as predE, t2.pred as predC, count(distinct sub) from
 		(select * from *<kb_name>*_p_50 where obj_type='named_entity') as t1
 		inner join
 		(select * from *<kb_name>*_p_50 where obj_type='int') as t2
 	on t1.sub = t2.sub
 	group by t1.pred, t2.pred
-	```
-	*Note* This is not time-efficient for the Freebase KB. Use instead
-	```select t1.pred as predE, t2.pred as predC, count(*) from fb_sub_pred_necount as t1 inner join fb_sub_pred_intval as t2 on t1.sub = t2.sub group by t1.pred, t2.pred
+	```~~
+	*Note* This is not time-efficient. Use instead
+	```select t1.pred as predE, t2.pred as predC, count(*) from *<kb-name>*_sub_pred_necount as t1 inner join *<kb-name>*_sub_pred_intval as t2 on t1.sub = t2.sub group by t1.pred, t2.pred
 	```
 
 6. Get predicate marginals (#subjects per predicate) in files labelled `./marginals/*<kb-name>*_int.csv` for counting predicate marginals and `./marginals/*<kb-name>*_ne.csv` for enumerating predicate marginals.
+
+7. Run `get_cooccurrence_scores.py` to get the alignment metrics.
+
+8. Run `get_linguistic_sim.py` to generate linguistic alignment.
+
+9. Get inverse predicates from postgres server
+	`select count(*) from *<kb-name>*_inv_pred_property where frequency >= 50 and persub_max_ne > 1`
+   into a list in `p_50_prednames/`
+
+10. Get the number of entities per subject per inverse predicate information from KB query using psql.
+	```psql
+	\copy (Select obj, pred, count(*) from freebase_spot where pred in (*<list from file kb-name_pred_names_p_50>*) obj_type='named_entity' group by pred, obj order by pred) to 'filepath/named_entities_per_pred_per_sub_*<kb>*.csv' with CSV;
+	``` 
+
+11. Get co-occurrence stats for inv predicates
 
 ### Demo 
 
