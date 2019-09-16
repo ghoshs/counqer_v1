@@ -110,23 +110,23 @@ Random Classifier performance:
 Precision Recall scores of all models
 a. Counting
 
-|Model 		|Recall		   |Precision   | 
-|-----------|--------------|------------|
-|Random     | 12.8         | 12.8       |
-|Logistic   | 51.2         | 19.0       |
-|Bayesian   | 48.7         | 20.2       |
-|Lasso      | **71.7**     | **23.3**   |
-|Neural     | 28.0         | 20.0       |
+|Model 		|Recall		   |Precision   | F1 	 |
+|-----------|--------------|------------|--------|
+|Random     | 12.8         | 12.8       | 12.8   |
+|Logistic   | 51.2         | 19.0       | 27.7   |
+|Bayesian   | 48.7         | 20.2       | 28.5   |
+|Lasso      | **71.7**     | **23.3**   |**35.1**|
+|Neural     | 35.8         | 20.8       | 26.3   |
 
 b. Enumerating
 
-|Model 		|Recall		   |Precision   | 
-|-----------|--------------|------------|
-|Random     | 40.6         | 40.6       |
-|Logistic   | 55.6         | 51.7       |
-|Bayesian   | 55.6         | 51.7       |
-|Lasso      | 51.1         | 63.1       |
-|Neural     | **65.0**     | **50.0**   |
+|Model 		|Recall		   |Precision   | F1     |
+|-----------|--------------|------------|--------|
+|Random     | 40.6         | 40.6       | 40.6   |
+|Logistic   | **55.6**     | 51.7       | 53.5   |
+|Bayesian   | **55.6**     | 51.0       | 53.5   |
+|Lasso      | 51.1         | **59.6**   |**55.0**|
+|Neural     | 53.0         | 49.6       | 51.2   |
 
 ### Alignment metrics computation
 Location: `./alignment`
@@ -140,9 +140,7 @@ Location: `./alignment`
 
 	`get_sameAs_dbpedia.py` - for all unique entities collected from KB and shortened, get the corresponting entity identities in other KBs (namely, Wikidata and Freebase).
 
-2. Get the two predicate lists from `get_predicate_list.R`.
-
-3. Get the number of entities per subject per predicate information from KB query using psql.
+2. Get the number of entities per subject per predicate information from KB query using psql.
 
 	a. Enumerating
 
@@ -165,10 +163,10 @@ Location: `./alignment`
 		
 	**Note** Create indexes on the predicate column.
 
-4. Create a view of triples in each kb having p_50 predicates. 
+3. Create a view of triples in each kb having p_50 predicates. 
 	`create view *<kb_name>*_p_50 as select * from *<kb-name>*_spot where pred in (*<list from file kb_pred_names_p_50>*)`
 
-5. Get co-occurrence statistics on the generated view. Store co-occuring pairs (predE, predC, #co-occurring subjects) in `./cooccurrence/*<kb-name>*_predicate_pairs.csv`.
+4. Get co-occurrence statistics on the generated view. Store co-occuring pairs (predE, predC, #co-occurring subjects) in `./cooccurrence/*<kb-name>*_predicate_pairs.csv`.
 	~~``` psql
 	select t1.pred as predE, t2.pred as predC, count(distinct sub) from
 		(select * from *<kb_name>*_p_50 where obj_type='named_entity') as t1
@@ -181,22 +179,70 @@ Location: `./alignment`
 	```select t1.pred as predE, t2.pred as predC, count(*) from *<kb-name>*_sub_pred_necount as t1 inner join *<kb-name>*_sub_pred_intval as t2 on t1.sub = t2.sub group by t1.pred, t2.pred
 	```
 
-6. Get predicate marginals (#subjects per predicate) in files labelled `./marginals/*<kb-name>*_int.csv` for counting predicate marginals and `./marginals/*<kb-name>*_ne.csv` for enumerating predicate marginals.
+5. Get predicate marginals (#subjects per predicate) in files labelled `./marginals/*<kb-name>*_int.csv` for counting predicate marginals and `./marginals/*<kb-name>*_ne.csv` for enumerating predicate marginals.
+	`select pred, count(*) from *<tablename>* group by pred` where `*<tablename>* in *kb-name*_sub_pred_intval, *kb-name*_sub_pred_neocunt, *kb-name*_obj_pred_necount`
 
-7. Run `get_cooccurrence_scores.py` to get the alignment metrics.
+6. Run `get_cooccurrence_scores.py` to get the alignment metrics.
 
-8. Run `get_linguistic_sim.py` to generate linguistic alignment.
+7. Run `get_linguistic_sim.py` to generate linguistic alignment.
 
-9. Get inverse predicates from postgres server
-	`select count(*) from *<kb-name>*_inv_pred_property where frequency >= 50 and persub_max_ne > 1`
+
+### Inverse Predicates
+1. Get inverse predicates from postgres server
+	`select pred_inv from *<kb-name>*_inv_pred_property where frequency >= 50`
    into a list in `p_50_prednames/`
 
-10. Get the number of entities per subject per inverse predicate information from KB query using psql.
+2. Get the number of entities per subject per inverse predicate information from KB query using psql.
 	```psql
-	\copy (Select obj, pred, count(*) from freebase_spot where pred in (*<list from file kb-name_pred_names_p_50>*) obj_type='named_entity' group by pred, obj order by pred) to 'filepath/named_entities_per_pred_per_sub_*<kb>*.csv' with CSV;
+	\copy (Select obj, pred, count(*) from *<kb-name>*_spot where pred in (*<list from file kb-name_pred_names_p_50>*) and obj_type='named_entity' group by pred, obj order by pred) to 'filepath/named_entities_per_pred_per_sub_*<kb>*.csv' with CSV;
 	``` 
 
-11. Get co-occurrence stats for inv predicates
+3. Get co-occurrence stats for inv predicates
+
+4. Label inverse predicates as enumerating using the enumerating classifier.
+
+### Post-processing 
+Location: `./alignment`
+
+#### 1. Predicate Filtering 
+
+`filter_prednames.py` - to remove codes and id's from predicted predicates. The number of predicates (id and code names) filtered before and after classification -
+
+|Type 		|Pre-class	   |Post-class  |
+|-----------|--------------|------------|
+|Enumerating| 2158         | 147        |
+|Enum_inv   | 9			   | 4			|
+|Counting   | 2158         | 881        |
+
+#### 2. Metrics aggregation
+
+1. Get the (filtered) predicate lists from `get_predicate_list.R`. 
+
+2. Keep only required metrics (predicate pairs which are in the predicted lists) in `./metrics_req` folder by running `metrics_assembly.R`.
+
+`Number of aligments obtained = 4265`
+
+|KB name	|Direct		   |Inverse     |
+|-----------|--------------|------------|
+|DBP map    | 138          | 126        |
+|DBP_raw    | 1947         | 1756       |
+|WD         | 22           | 2          |
+|FB         | 120          | 154        |
+|**Total**  | **2227**     | **2038**   |
+
+### Crowd Evaluation of Alignment
+
+1. `clean_fig8_test_ques.R` - to re-use figure8 evaluation questions.
+
+2. `test_questions/edit_fig8_for_mturk.py` - create test csv for mturk
+
+3. `clean_mturk_resp.R` - check responses of test questions.
+
+4. `select_random_prop_for_eval.R` - create a list of 100 counting and 100 enumerating (1:3 ratio of inverse vs. direct) predicates for crowd evaluation.
+
+5. `eval_questions/create_eval_top3_pairs.py` - to get list of top predicates from different metrics.
+
+6. `create_datafile.py` - create csv with labelled triples for mturk.
 
 ### Demo 
 
