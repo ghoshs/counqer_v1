@@ -184,9 +184,9 @@ neural.train.dataC <- train.dataC %>% mutate(temp = 1) %>% spread(sub_type, temp
 set.seed(12)
 train <- sample(nrow(neural.train.dataC), nrow(neural.train.dataC))
 set.seed(12)
-nn.modelC = neuralnet(final~., data=neural.train.dataC, hidden=3, act.fct = "logistic", linear.output = F)
+nn.modelC = neuralnet(final~., data=neural.train.dataC, hidden=3, act.fct = "logistic", linear.output = F, rep=10)
 plot(nn.modelC)
-neural.probC <- compute(nn.modelC, neural.train.dataC)$net.result
+neural.probC <- compute(nn.modelC, neural.train.dataC, rep=which.min(nn.modelC$result.matrix[1,]))$net.result
 # neural.probC <- (compute(nn.modelC, neural.train.dataC)$net.result + 1)*0.5
 plot(neural.probC,neural.train.dataC$final, col=as.factor(neural.train.dataC$final))
 plot(neural.probC, (neural.train.dataC$final-neural.probC)) ## residuals have a clear trend - variance in data left to be explained 
@@ -210,8 +210,9 @@ set.seed(12)
 train <- seq(1, nrow(train.dataC))
 for (i in 1:nrow(train.dataC)){
     tr <- train[train!=i]
-    nn.fit = neuralnet(final~., data=neural.train.dataC[tr,], hidden=3, act.fct = "logistic", linear.output = F)
-    loocvC.neural[i] = ifelse(compute(nn.fit, neural.train.dataC)$net.result[-tr,1] > thresholdC.neural, 1, 0)
+    nn.fit = neuralnet(final~., data=neural.train.dataC[tr,], hidden=3, act.fct = "logistic", linear.output = F,rep=5)
+    loocvC.neural[i] = ifelse(compute(nn.fit, neural.train.dataC, 
+                                      rep=which.min(nn.fit$result.matrix[1,]))$net.result[-tr,1] > thresholdC.neural, 1, 0)
 }
 conf_matrixC.neural <- table(ifelse(loocvC.neural > thresholdC.neural, 1, 0), neural.train.dataC$final)
 conf_matrixC.neural["1","1"]/sum(neural.train.dataC$final == 1) #recall

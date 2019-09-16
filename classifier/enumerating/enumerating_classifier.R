@@ -86,6 +86,9 @@ removeE.outlier <- c('http://dbpedia.org/ontology/stateOfOrigin', 'http://dbpedi
 ## if removeE.outlier is not empty, remove outliers and rescale data line 46
 
 train.dataE <- dataE.2[!names(dataE.2) %in% removeE]
+train.dataE$sub_type <- as.factor(sub("^", "sub.", train.dataE$sub_type))
+train.dataE$obj_type <- as.factor(sub("^", "obj.", train.dataE$obj_type))
+
 linear.modelE <- glm(final~., data=train.dataE, family = binomial)
 summary(linear.modelE)
 
@@ -172,10 +175,10 @@ neural.train.dataE <- train.dataE %>% mutate(temp = 1) %>% spread(sub_type, temp
 neural.train.dataE <- neural.train.dataE %>% mutate(temp = 1) %>% spread(obj_type, temp, fill=0)
 set.seed(12)
 train <- sample(nrow(neural.train.dataE), nrow(neural.train.dataE))
-
-nn.modelE = neuralnet(final~., data=neural.train.dataE, hidden=3, act.fct = "logistic", linear.output = F)
+set.seed(12)
+nn.modelE = neuralnet(final~., data=neural.train.dataE, hidden=3, act.fct = "logistic", linear.output = F, rep=10)
 plot(nn.modelE)
-neural.probE <- compute(nn.modelE, neural.train.dataE)$net.result
+neural.probE <- compute(nn.modelE, neural.train.dataE, rep=which.min(nn.modelE$result.matrix[1,]))$net.result
 
 thresholdE <- seq(0,1,0.01) 
 respE.neural <- get_response_df(thresholdE, neural.train.dataE, neural.probE[,1])
@@ -196,14 +199,15 @@ set.seed(12)
 train <- seq(1, nrow(train.dataE))
 for (i in 1:nrow(train.dataE)){
   tr <- train[train!=i]
-  nn.fit = neuralnet(final~., data=neural.train.dataE[tr,], hidden=3, act.fct = "logistic", linear.output = F)
-  loocvE.neural[i] = ifelse(compute(nn.fit, neural.train.dataE)$net.result[-tr,1] > thresholdE.neural, 1, 0)
+  nn.fit = neuralnet(final~., data=neural.train.dataE[tr,], hidden=3, act.fct = "logistic", linear.output = F, rep=10)
+  loocvE.neural[i] = ifelse(compute(nn.fit, neural.train.dataE, 
+                                    rep=which.min(nn.fit$result.matrix[1,]))$net.result[-tr,1] > thresholdE.neural, 1, 0)
 }
 conf_matrixE.neural <- table(ifelse(loocvE.neural > thresholdE.neural, 1, 0), neural.train.dataE$final)
 conf_matrixE.neural["1","1"]/sum(neural.train.dataE$final == 1) #recall
 conf_matrixE.neural["1","1"]/(conf_matrixE.neural["1","0"] + conf_matrixE.neural["1","1"]) #precision
 
-  ### Lasso
+### Lasso
 library(glmnet)
 grid =10^seq(10,-2, length =100)
 x <- model.matrix(final~., train.dataE)
@@ -248,7 +252,7 @@ conf_matrixE.lasso <- table(ifelse(lasso.probE > thresholdE.lasso, 1, 0), train.
 conf_matrixE.lasso["1","1"]/sum(train.dataE$final == 1) #recall
 conf_matrixE.lasso["1","1"]/(conf_matrixE.lasso["1","0"] + conf_matrixE.lasso["1","1"]) #precision
 
-### compare models
+  ### compare models
 jpeg('classifier/enumerating/model_comparison_enumerating.jpg', width = 10, height = 10, units = 'in', res=300)
 ggplot() + 
   geom_point(data=rocE.linear, aes(x=fpr, y=tpr), fill="blue", color="blue") + 
@@ -297,6 +301,9 @@ removeE <- c('pcent_comma_sep', 'pcent_int', 'pcent_float', 'pcent_date', 'pcent
              'singular_est_matches', 'plural_est_matches', 
              'persub_max_ne', 'persub_min_ne', 'persub_10_ptile_ne', 'persub_avg_ne')
 test.dataE <- test.dataE[!names(test.dataE) %in% removeE]
+test.dataE$sub_type <- as.factor(sub("^", "sub.", test.dataE$sub_type))
+test.dataE$obj_type <- as.factor(sub("^", "obj.", test.dataE$obj_type))
+
 neural.test.dataE <- test.dataE %>% mutate(temp = 1) %>% spread(sub_type, temp, fill=0)
 neural.test.dataE <- neural.test.dataE %>% mutate(temp = 1) %>% spread(obj_type, temp, fill=0)
 lasso.test.dataE <- model.matrix(predicate~., test.dataE)
@@ -310,3 +317,54 @@ predictionsE$neural <- ifelse(compute(nn.modelE, neural.test.dataE)$net.result[,
 predictionsE$lasso <- ifelse(predict(lasso.modelE, s=bestlamE, newx=lasso.test.dataE)[,1] > thresholdE.lasso, 1, 0)
 
 write.csv(predictionsE, 'classifier/enumerating/predictions.csv', row.names = F)
+
+###### Inverse predicates
+test.dataE.inv <- read.csv('feature_file/inv_predicates_p_50.csv', na.strings = "NULL")
+test.dataE.inv <- test.dataE.inv[, c(1:7,11:14)]
+test.dataE.inv[is.na(test.dataE.inv)] <- 0
+### data imputation for missing values
+predE.inv.usage_ratio.test <- test.dataE.inv$plural_est_matches/test.dataE.inv$singular_est_matches
+predE.inv.usage_ratio.test[is.infinite(predE.inv.usage_ratio.test)] <- NaN
+set.seed(1)
+imputeE.inv.test <- runif(sum(is.nan(predE.inv.usage_ratio.test)))*10^-3
+set.seed(1)
+predE.inv.usage_ratio.test[is.nan(predE.inv.usage_ratio.test)] <- ifelse(sample(c(0,1), 
+                                                                        size = sum(is.nan(predE.inv.usage_ratio.test)), 
+                                                                        replace = T, prob = c(0.5, 0.5)) == 1, 
+                                                                 1 - imputeE.inv.test, 1 + imputeE.inv.test)
+test.dataE.inv$usage_ratio <- predE.inv.usage_ratio.test
+### scale values
+test.dataE.inv[, c(7,8,9)] <- lapply(test.dataE.inv[, c(7,8,9)], function(x) log10(x + 10^-5))
+test.dataE.inv[] <- lapply(test.dataE.inv,  function(x) if (is.numeric(x)) scale(x) else {x})
+# ### replace bnode by thing in sub_type and literal in obj_type
+# test.dataE.inv$obj_type[which(test.dataE.inv$obj_type == 'bnode')] <- "literal"
+# test.dataE.inv$obj_type <- factor(test.dataE.inv$obj_type)
+### remove codependent variables 
+removeE <- c('singular_est_matches', 'plural_est_matches', 
+             'persub_max_ne', 'persub_min_ne', 'persub_10_ptile_ne', 'persub_avg_ne')
+test.dataE.inv <- test.dataE.inv[!names(test.dataE.inv) %in% removeE]
+
+test.dataE.inv$pcent_ne <- matrix(rep(1.0, nrow(test.dataE.inv)), nrow = nrow(test.dataE.inv), ncol = 1)
+colnames(test.dataE.inv)[1] <- 'predicate'
+test.dataE.inv <- test.dataE.inv[,c(1,3,7,2,5,4,6)] 
+test.dataE.inv$sub_type <- as.factor(sub("^", "sub.", test.dataE.inv$sub_type))
+test.dataE.inv$obj_type <- as.factor(sub("^", "obj.", test.dataE.inv$obj_type))
+test.dataE.inv$obj_type <- factor(test.dataE.inv$obj_type, levels = c(levels(test.dataE.inv$obj_type),"obj.literal"))
+
+neural.test.dataE.inv <- test.dataE.inv %>% mutate(temp = 1) %>% spread(sub_type, temp, fill=0)
+neural.test.dataE.inv <- neural.test.dataE.inv %>% mutate(temp = 1) %>% spread(obj_type, temp, fill=0)
+if (!'obj.literal' %in% colnames(neural.test.dataE.inv)) {
+  neural.test.dataE.inv$obj.literal <- 0
+}
+lasso.test.dataE.inv <- model.matrix(predicate~., test.dataE.inv)
+
+predictionsE.inv <- data.frame(matrix(nrow = nrow(test.dataE.inv), ncol = 5))
+colnames(predictionsE.inv) <- c("predicate","linear", "bayesian", "neural", "lasso")
+predictionsE.inv$predicate <- test.dataE.inv$predicate
+
+predictionsE.inv$linear <- ifelse(predict(linear.modelE, newdata = test.dataE.inv, type = "response") > thresholdE.linear, 1, 0)
+predictionsE.inv$bayesian <- ifelse(predict(bayesian.modelE, newdata = test.dataE.inv, type="response") > thresholdE.bayesian, 1, 0)
+predictionsE.inv$lasso <- ifelse(predict(lasso.modelE, s=bestlamE, newx=lasso.test.dataE.inv)[,1] > thresholdE.lasso, 1, 0)
+predictionsE.inv$neural <- ifelse(compute(nn.modelE, neural.test.dataE.inv, 
+                                          rep=which.min(nn.modelE$result.matrix[1,]))$net.result[,1] > thresholdE.neural, 1, 0)
+write.csv(predictionsE.inv, 'classifier/enumerating/predictions_inv.csv', row.names = F)
