@@ -208,11 +208,13 @@ Location: `./alignment`
 
 `filter_prednames.py` - to remove codes and id's from predicted predicates. The number of predicates (id and code names) filtered before and after classification -
 
-|Type 		|Pre-class	   |Post-class  |
-|-----------|--------------|------------|
-|Enumerating| 2158         | 147        |
-|Enum_inv   | 9			   | 4			|
-|Counting   | 2158         | 881        |
+|Type 		|Pre-class	   |Post-class  | # removed by classifier |
+|-----------|--------------|------------|-------------------------|
+|Enumerating| 2158 (26156) | 147 (9477) | 2011 (93.1%)			  |
+|Enum_inv   | 9	   (10091) | 4   (2890)	| 5	   (55.5%)			  |
+|Counting   | 2158 (26156) | 881 (10396)| 1277 (59.1%)			  |
+
+*Note:* number in bracket denotes the predicates input to the filter.
 
 #### 2. Metrics aggregation
 
@@ -231,6 +233,7 @@ Location: `./alignment`
 |**Total**  | **2227**     | **2038**   |
 
 ### Crowd Evaluation of Alignment
+Location: `./alignment_crowd_annotations`
 
 1. `clean_fig8_test_ques.R` - to re-use figure8 evaluation questions.
 
@@ -238,11 +241,29 @@ Location: `./alignment`
 
 3. `clean_mturk_resp.R` - check responses of test questions.
 
-4. `select_random_prop_for_eval.R` - create a list of 100 counting and 100 enumerating (1:3 ratio of inverse vs. direct) predicates for crowd evaluation.
+4. `select_random_prop_for_eval.R` - create a list of 300 counting and 300 enumerating (ratio of inverse vs. direct) predicates for crowd evaluation.
 
 5. `eval_questions/create_eval_top3_pairs.py` - to get list of top predicates from different metrics.
+	`#datapoints for enumerating = 460`
+	`#datapoints for counting = 371`
 
-6. `create_datafile.py` - create csv with labelled triples for mturk.
+6. `eval_questions/create_datafile.py` - create csv with labelled triples for mturk.
+	`#datapoints for enumerating = 169` which implies that 291 pairs do not cooccur.
+	`#datapoints for counting = 72` which implies that 299 pairs do not cooccur.
+
+7. Launch Mturk task with the csv files in `eval_questions/data/` and run `eval_questions/notify_successful_workers.py` to notify selected workers to take the task.
+
+8. Download MTurk results to `eval_annotations/` and run `eval_annotations/clean_mturk_repsonse.R` to get absolute scores for all pairs
+	```score = 0.5*(1/3)*(#high*1 + #moderate*(2/3) + #low*(1/3) + #none*0) +
+  	0.5*(1/3)*(#complete*1 + #incomplete*0.5 + #unrelated*0)
+  	```
+  	*Note:* 0.5 * (1/j) = is weight for topicality and enumeration scores times the number of judges (m); #x * w = number of votes x received from 3 judges times the weight of x.
+
+### Evaluation
+Location: `./evaluation`
+
+1. `evaluate.py` - To generate dcg scores for all metrics.
+
 
 ### Demo 
 
