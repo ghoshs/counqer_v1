@@ -102,7 +102,10 @@ def get_triples(predE, predC, kb_name):
 	subject = result.sample(n=1, random_state=1)['sub'].tolist()[0]
 	o2 = result.sample(n=1, random_state=1)['intval'].tolist()[0]
 
-	query3 = sql.SQL("select obj from {} where pred=(%(pred)s) and obj_type='named_entity' and sub=(%(sub)s)").format(sql.Identifier(spot_dbname[kb_name]))
+	if not inverse:
+		query3 = sql.SQL("select obj from {} where pred=(%(pred)s) and obj_type='named_entity' and sub=(%(sub)s)").format(sql.Identifier(spot_dbname[kb_name]))
+	else:
+		query3 = sql.SQL("select sub as obj from {} where pred=(%(pred)s) and obj_type='named_entity' and obj=(%(sub)s)").format(sql.Identifier(spot_dbname[kb_name]))
 	result_o1 = pd.read_sql_query(query3, db_conn, params={'pred': predE, 'sub': subject})
 
 	o1 = result_o1['obj'].tolist()
@@ -217,6 +220,8 @@ def create_data_file(fin_name, fout_name, type):
 
 			with open(fout_name, 'a') as fout:
 				writer = csv.writer(fout, delimiter=',', quoting=csv.QUOTE_NONNUMERIC)
+				if '_inv' in predE:
+					pred_labels[predE] = pred_labels[predE]+'<sup>-1</sup>'
 				writer.writerow([predE, predC, pred_labels[predE], pred_labels[predC], s_label, o1_label, o2])
 		print('No occur: ', no_occur)
 

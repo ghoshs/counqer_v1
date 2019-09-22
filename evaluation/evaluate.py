@@ -5,34 +5,72 @@ import os
 import itertools
 from tqdm import tqdm
 import csv
+import multiprocessing as mp
+from joblib import Parallel, delayed
 
 server_path = '/GW/D5data-11/existential-extraction/'
 
+global df_ling
+
+def parallelize(row, prefixes, df_GT):
+	global df_ling
+	if row[2] <= 0.0:
+		return
+	pred1 = [prefix+row[0] for prefix in prefixes]
+	pred2 = [prefix+row[1] for prefix in prefixes]
+
+	for i, j in itertools.product(pred1, pred2):
+		if len(df_GT.loc[(df_GT['predE'] == i) & (df_GT['predC'] == j)]) > 0:
+			df_ling = df_ling.append({'predE': i, 'predC': j, 'cosine_sim': row[2]}, ignore_index=True)
+		if len(df_GT.loc[(df_GT['predE'] == j) & (df_GT['predC'] == i)]) > 0:
+			df_ling = df_ling.append({'predE': j, 'predC': i, 'cosine_sim': row[2]}, ignore_index=True)
+		if len(df_GT.loc[(df_GT['predE'] == i+'_inv') & (df_GT['predC'] == j)]) > 0:
+			df_ling = df_ling.append({'predE': i+'_inv', 'predC': j, 'cosine_sim': row[2]}, ignore_index=True)
+		if len(df_GT.loc[(df_GT['predE'] == j+'_inv') & (df_GT['predC'] == i)]) > 0:
+			df_ling = df_ling.append({'predE': j+'_inv', 'predC': i, 'cosine_sim': row[2]}, ignore_index=True)
+	return
+
 def get_linguistic_alignments(lingpath, df_GT):
+	global df_ling
 	kb_prefixes = {'dbp_map': ['http://dbpedia.org/ontology/'], 'dbp_raw': ['http://dbpedia.org/property/'], 
 					'wd': ['http://www.wikidata.org/prop/direct/', 'http://www.wikidata.org/prop/direct-normalized/'], 
 					'fb': ['http://rdf.freebase.com/ns/', 'http://rdf.freebase.com/key/']}
 	kb_names = ['dbp_map', 'dbp_raw', 'wd', 'fb']
-	df = pd.DataFrame(columns=['predE', 'predC', 'cosine_sim'])
+	df_ling = pd.DataFrame(columns=['predE', 'predC', 'cosine_sim'])
 
+	cores = mp.cpu_count()
 	for kb_name in kb_names:
 		with open(lingpath+kb_name+'_linguistic_alignment.csv') as fp:
 			reader = csv.reader(fp)
 			next(reader, None)
-
-			for row in tqdm(reader):
-				pred1 = [prefix+row[0] for prefix in kb_prefixes[kb_name]]
-				pred2 = [prefix+row[1] for prefix in kb_prefixes[kb_name]]
-				for i, j in itertools.product(pred1, pred2):
-					if len(df_GT.loc[(df_GT['predE'] == i) & (df_GT['predC'] == j)]) > 0:
-						df = df.append({'predE': i, 'predC': j, 'cosine_sim': row[2]}, ignore_index=True)
-					if len(df_GT.loc[(df_GT['predE'] == j) & (df_GT['predC'] == i)]) > 0:
-						df = df.append({'predE': j, 'predC': i, 'cosine_sim': row[2]}, ignore_index=True)
-					if len(df_GT.loc[(df_GT['predE'] == i+'_inv') & (df_GT['predC'] == j)]) > 0:
-						df = df.append({'predE': i+'_inv', 'predC': j, 'cosine_sim': row[2]}, ignore_index=True)
-					if len(df_GT.loc[(df_GT['predE'] == j+'_inv') & (df_GT['predC'] == i)]) > 0:
-						df = df.append({'predE': j+'_inv', 'predC': i, 'cosine_sim': row[2]}, ignore_index=True)
-	return df
+			bufferlist = []
+			Parallel(n_jobs=cores, require='sharedmem')(delayed(parallelize)(row, kb_prefixes[kb_name], df_GT) for row in tqdm(reader))
+			# for row in tqdm(reader):
+			# 	if row[2] <= 0.0:
+			# 		continue
+			# 	pred1 = [prefix+row[0] for prefix in kb_prefixes[kb_name]]
+			# 	pred2 = [prefix+row[1] for prefix in kb_prefixes[kb_name]]
+			# 	for i, j in itertools.product(pred1, pred2):
+			# 		if len(df_GT.loc[(df_GT['predE'] == i) & (df_GT['predC'] == j)]) > 0:
+			# 			bufferlist.append(pd.Series([i,j,row[2]], index=['predE', 'predC', 'cosine_sim']))
+			# 			# df = df.append({'predE': i, 'predC': j, 'cosine_sim': row[2]}, ignore_index=True)
+			# 		if len(df_GT.loc[(df_GT['predE'] == j) & (df_GT['predC'] == i)]) > 0:
+			# 			bufferlist.append(pd.Series([j,i,row[2]], index=['predE', 'predC', 'cosine_sim']))
+			# 			# df = df.append({'predE': j, 'predC': i, 'cosine_sim': row[2]}, ignore_index=True)
+			# 		if len(df_GT.loc[(df_GT['predE'] == i+'_inv') & (df_GT['predC'] == j)]) > 0:
+			# 			bufferlist.append(pd.Series([i+'_inv',j,row[2]], index=['predE', 'predC', 'cosine_sim']))
+			# 			# df = df.append({'predE': i+'_inv', 'predC': j, 'cosine_sim': row[2]}, ignore_index=True)
+			# 		if len(df_GT.loc[(df_GT['predE'] == j+'_inv') & (df_GT['predC'] == i)]) > 0:
+			# 			bufferlist.append(pd.Series([j+'_inv',i,row[2]], index=['predE', 'predC', 'cosine_sim']))
+			# 			# df = df.append({'predE': j+'_inv', 'predC': i, 'cosine_sim': row[2]}, ignore_index=True)
+			# 	if len(bufferlist) == 1000:
+			# 		df = df.append(bufferlist, ignore_index=True)
+			# 		bufferlist = []
+			# if len(bufferlist) > 0:
+			# 	df = df.append(bufferlist, ignore_index=True)
+			# 	bufferlist = []
+	print(len(df_ling))
+	return
 
 
 # graded relevance
@@ -137,6 +175,7 @@ def get_ndcg(df, df_GT, type, type_name, order):
 	df_type.to_csv(fname, index=False, encoding='utf-8')
 
 def get_scores(GTfname, ccrfname, lingpath, pred_type):
+
 	GTcols = ["Input.predE","Input.predC","Input.e_label","Input.c_label","high","moderate","low","none","complete","incomplete","unrelated","score"]
 	GTnames = ["predE", "predC","e_label","c_label"]
 	GTnames.extend(GTcols[4:])
@@ -149,13 +188,12 @@ def get_scores(GTfname, ccrfname, lingpath, pred_type):
 	df_GT = pd.read_csv(GTfname, usecols=GTcols, dtype=GTtype)[GTcols]
 	df_GT.columns = GTnames
 	df_ccr = pd.read_csv(ccrfname, dtype=ccrdtype)
-	df_ling = get_linguistic_alignments(lingpath, df_GT[['predE', 'predC']])
 
 	order = ['predE', 'predC'] if pred_type is 'predE' else ['predC', 'predE']
 	df_GT = get_ranked_data(df_GT, 'rel_GT', 'score', order)
 
 	df_ccr.loc[df_ccr['inv'] == 1, 'predE'] = df_ccr['predE']+'_inv'
-	df_ccr['pmr'] = df_ccr['exact_match']/float(df_ccr['n'])
+	df_ccr['pmr'] = df_ccr['exact_match']/df_ccr['n']
 	df_ccr['ptile90mr'] = np.where(df_ccr['ptile90int']<df_ccr['ptile90ne'], df_ccr['ptile90int']/df_ccr['ptile90ne'], df_ccr['ptile90ne']/df_ccr['ptile90int'])
 
 	get_ndcg(df_ccr[["predE", "predC", "cooccur"]], df_GT, 'cooccur', 'cooccur', order)
@@ -168,7 +206,8 @@ def get_scores(GTfname, ccrfname, lingpath, pred_type):
 	get_ndcg(df_ccr[["predE", "predC", "pmr"]], df_GT, 'pmr', 'pmr', order)
 	get_ndcg(df_ccr[["predE", "predC", "ptile90mr"]], df_GT, 'ptile90mr', 'ptile90mr', order)
 
-	get_ndcg(df_ling, df_GT, 'cosine_sim', 'cosine_sim', order)
+	# get_linguistic_alignments(lingpath, df_GT[['predE', 'predC']])
+	# get_ndcg(df_ling, df_GT, 'cosine_sim', 'cosine_sim', order)
 
 def main():
 	# path = '../alignment_crowd_annotations/eval_annotations/'
@@ -178,7 +217,7 @@ def main():
 	# lingpath = '../alignment/metrics_req/'
 	ccrfname = '/GW/D5data-11/existential-extraction/metrics_req/cooccur_alignment.csv'
 	lingpath = '/GW/D5data-11/existential-extraction/metrics_req/'
-	get_scores(GTfname, ccrfname, lingpath, 'predE')
+	# get_scores(GTfname, ccrfname, lingpath, 'predE')
 	GTfname = path + 'CtoE_GT_scores.csv'
 	get_scores(GTfname, ccrfname, lingpath, 'predC')
 	
