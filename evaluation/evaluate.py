@@ -34,7 +34,7 @@ def similarity(row):
 	e_label_list = [x for x in row['e_label'].split(' ') if x in model]
 	c_label_list = [x for x in row['c_label'].split(' ') if x in model]
 	cosine_sim = model.n_similarity(e_label_list, c_label_list) if (len(e_label_list)>0 and len(c_label_list)>0) else 0
-	return pd.Series([row['predE'], row['predC'], cosine_sim], index = ['predE', 'predC', 'cosine_sim'])
+	return pd.Series([row['predE'], row['predC'], cosine_sim], index = ['predE', 'predC', 'cosinesim'])
 
 def get_linguistic_alignments(df_GT):
 	# global df_ling
@@ -171,6 +171,7 @@ def get_scores(GTfname, ccrfname, lingpath, pred_type):
 	order = ['predE', 'predC'] if pred_type is 'predE' else ['predC', 'predE']
 	df_GT = get_ranked_data(df_GT, 'rel_GT', 'score', order)
 
+	### colnames of metrics old nad new should not contain '_' ###
 	df_ccr.loc[df_ccr['inv'] == 1, 'predE'] = df_ccr['predE']+'_inv'
 	df_ccr['pmr'] = df_ccr['exact_match']/df_ccr['n']
 	df_ccr['ptile90mr'] = np.where(df_ccr['ptile90int']<df_ccr['ptile90ne'], df_ccr['ptile90int']/df_ccr['ptile90ne'], df_ccr['ptile90ne']/df_ccr['ptile90int'])
@@ -185,7 +186,7 @@ def get_scores(GTfname, ccrfname, lingpath, pred_type):
 	get_ndcg(df_ccr[["predE", "predC", "pmr"]], df_GT, 'pmr', 'pmr', order)
 	get_ndcg(df_ccr[["predE", "predC", "ptile90mr"]], df_GT, 'ptile90mr', 'ptile90mr', order)
 
-	get_ndcg(df_ling, df_GT, 'cosine_sim', 'cosine_sim', order)
+	get_ndcg(df_ling, df_GT, 'cosinesim', 'cosinesim', order)
 
 def main():
 	# path = '../alignment_crowd_annotations/eval_annotations/'
