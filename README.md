@@ -41,7 +41,7 @@ Sample predicates from candidate KBs to present to the crowd annotators
 
 	d. `get_labelled_triples.py` reads all sampled predicates from `./counting` and creates a data file with labelled triples `./counting/counting_labelled_triples.csv`. 
 
-	e. `clean_labelled_triples.R` unifies triples from mltiple sources to create a csv file ready for upload to the crowd-sourcing platform. 
+	e. `clean_labelled_triples.R` unifies triples from multiple sources to create a csv file ready for upload to the crowd-sourcing platform. 
 
 	*NOTE*: Since Freebase returns empty subject labels we create a larger sample size (of 200 predicates) and select 100 samples with 5 complete example triples.
 
@@ -68,6 +68,18 @@ $ python
 
 ### Classifier dataset creation
 `./pred_property_p_50` has the predicate property files of all KBs with predicate frequency >= 50. Next, we collect data from different sources to create a unified feature file of all predicates (`predicates_p_50.csv`) and the labelled predicates (`labelled_data_counting.csv`, `labelled_data_enumerating.csv`) in the folder `./feature_file` using the script `./create_feature_file.R`.
+
+|KB | All | Frequent |
+|---|-----|----------|
+|DBP-raw | 59,149 | 13,394 |
+|inv | 14,085 | 3,241 |
+|DBP-map | 1,355  | 1,127  |
+|inv | 653 | 543 |
+|WD-truthy | 5,032 | 3,346 |
+|inv | 1,079 | 721 |
+|Freebase | 784,936 | 8,289|
+|inv | 14,871 | 5,583 |
+|**YAGO** | (79) | (79)|
 
 
 ### Classifier training
@@ -128,6 +140,26 @@ b. Enumerating
 |Lasso      | 51.1         | **59.6**   |**55.0**|
 |Neural     | 53.0         | 49.6       | 51.2   |
 
+
+Predicted counting predicates
+
+|KB|Input|Output|Filtered|
+|-------|------|-----|----|
+|DBP-raw | 13,394  | 5,853 | 5853 |
+| DBP-map | 1,127 | 898   | 898|
+| WD-truthy | 3,346 | 1,922 | 1,067|
+| Freebase  | 8,289 | 1,723 | 1,687|
+
+Predicted enumerating predicates
+
+|KB|Input|Output|Filtered|
+|-------|------|-----|----|
+|DBP-raw | 16,635   | 5,853 | 5853 |
+| DBP-map | 1,670  | 898   | 898|
+| WD-truthy | 4,067 | 99+117 | 1,067|
+| Freebase  | 13,872 | 6311+1441 =  | 1,687|
+
+
 ### Alignment metrics computation
 Location: `./alignment`
 
@@ -184,7 +216,8 @@ Location: `./alignment`
 
 6. Run `get_cooccurrence_scores.py` to get the alignment metrics.
 
-7. Run `get_linguistic_sim.py` to generate linguistic alignment.
+7. ~~Run `get_linguistic_sim.py` to generate linguistic alignment.~~
+	**Note:** Get linguistic similarity scores online since reading existing files is time consuming.
 
 
 ### Inverse Predicates
@@ -263,6 +296,7 @@ Location: `./alignment_crowd_annotations`
 Location: `./evaluation`
 
 1. `evaluate.py` - To generate dcg scores for all metrics.
+2. `aggregated_ndcg.R` - To get mean ndcg of all metrics.
 
 
 ### Demo 
