@@ -154,10 +154,10 @@ Predicted enumerating predicates
 
 |KB|Input|Output|Filtered|
 |-------|------|-----|----|
-|DBP-raw | 16,635   | 5,853 | 5853 |
-| DBP-map | 1,670  | 898   | 898|
-| WD-truthy | 4,067 | 99+117 | 1,067|
-| Freebase  | 13,872 | 6311+1441 =  | 1,687|
+|DBP-raw | 16,635   | 2,894+1196 = 4090 | 2894+1196 = 4090|
+| DBP-map | 1,670  | 173+135 =   308 | 173+135 = 308|
+| WD-truthy | 4,067 | 99+117 = 216|  86+ 117 = 203|
+| Freebase  | 13,872 | 6311+1441 =  7752| 6177+1437 = 7614|
 
 
 ### Alignment metrics computation
@@ -299,6 +299,24 @@ Location: `./evaluation`
 2. `aggregated_ndcg.R` - To get mean ndcg of all metrics.
 
 
-### Demo 
+## Demo 
 
 The demo is developed in Python using Flask webframework and run on an Apache webserver. The site is under contruction and may not exhibit full functionalites of the system. 
+
+### Flask Application
+Location: ./flask_app 
+
+### Predicate List
+Location: ./predicate_list
+
+Scipts for create json files of KB set predicates to be displayed in the demo.
+
+############### Notes
+
+```
+counting <- read.csv('alignment/counting_filtered.csv')
+wd_labels <- read.csv('datasetup/WD/wd_property_label.csv')
+wd_labels$id <- substr(as.character(wd_labels$Property), 32, nchar(as.character(wd_labels$Property)))
+counting$id <- sapply(counting$pred, function(x) substr(x, start=tail(gregexpr('/', x)[[1]], 1)+1, stop=nchar(as.character(x))))
+counting <- inner_join(counting, wd_labels, by='id')
+```

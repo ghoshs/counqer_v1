@@ -286,6 +286,7 @@ def get_final_alignment(ccrfname, pred_type):
 	
 	df_ling = get_linguistic_alignments(df_ccr[['predE', 'predC']], True)
 	df_comb = pd.merge(df_ccr[["predE", "predC", "jacc", "pmi", "pearson", "pmr", "ptile90mr"]], df_ling, how='inner', on=order, sort=False, suffixes=('','_y')) 
+	df_comb = df_comb.fillna(0)
 	if pred_type == 'predE':
 		df_comb["combined"] = (1/3.0)*(df_comb["cosinesim"] + df_comb["pmi"] + df_comb["pmr"])
 	else:

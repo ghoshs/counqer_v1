@@ -1,8 +1,10 @@
 import csv
 import pandas as pd 
 from tqdm import tqdm
+from gensim.models import KeyedVectors
 
-global enumerating, counting
+global enumerating, counting, wd_labels
+wd_prop_label_path = '/GW/D5data-11/existential-extraction/'
 
 def load_prednames(fname):
 	predlist = []
@@ -19,47 +21,125 @@ def load_cooccur_metrics(fname):
 	df = pd.read_csv(fname, dtype=types)
 	return df
 
-def load_linguistic_metrics(fpath):
-	kb_prefixes = ['http://dbpedia.org/ontology/', 'http://dbpedia.org/property/', 
-					'http://www.wikidata.org/prop/direct/', 'http://www.wikidata.org/prop/direct-normalized/' 
-					'http://rdf.freebase.com/ns/', 'http://rdf.freebase.com/key/']
-	kb_names = ['dbp_map', 'dbp_raw', 'wd', 'fb']
+def knowledgebase(pred):
+	if 'http://dbpedia.org/ontology/' in pred:
+		return 'dbp_map'
+	if 'http://dbpedia.org/property/' in pred:
+		return 'dbp_raw'
+	if 'http://www.wikidata.org/prop/' in pred:
+		return 'wd'
+	if 'http://rdf.freebase.com/' in pred:
+		return 'fb'
+	return ''
+
+def load_wd_labels():
+	wd_labels = {}
+	with open(wd_prop_label_path+'wd_property_label.csv') as fp:
+		reader = csv.reader(fp, quoting=csv.QUOTE_MINIMAL)
+		for row in reader:
+			predicate = row[0].split('/')[-1]
+			wd_labels[predicate] = row[1].lower()
+	return wd_labels
+
+def get_label_dbpedia(pred_list):
+	labels = {}
+	for pred in pred_list:
+		if pred.endswith('_inv'):
+			pred_new = pred.split('_inv')[0]
+		else:
+			pred_new = pred
+		if '/property/' in pred_new:
+			pred_new = pred_new.split('http://dbpedia.org/property/')[-1]
+		else:
+			pred_new = pred_new.split('http://dbpedia.org/ontology/')[-1]
+		p_label = pred_new[0].upper() + pred_new[1:]
+		if len(re.findall('[A-Z][^A-Z]*', p_label)) > 0:
+				p_label = ' '.join(re.findall('[A-Z][^A-Z]*', p_label))
+		labels[pred] = p_label.lower()
+	return labels
+
+def get_label_wikidata(pred_list):
+	labels = {}
+	for pred in pred_list:
+		if pred.endswith('_inv'):
+			pred_new = pred.split('_inv')[0]
+		else:
+			pred_new = pred
+		labels[pred] = wd_labels[pred_new]
+	return labels
+
+def get_label_freebase(pred_list):
+	labels = {}
+	for pred in pred_list:
+		labels[pred] = ' '.join(pred.split('.')[-1].split('_')).lower()
+	return labels
+
+def get_linguistic_metrics():
+	global wd_labels
+	model = KeyedVectors.load_word2vec_format('/GW/D5data-9/existential-extraction/word2vec.6B.300d.txt',binary=False)
+	wd_labels = load_wd_labels()
+
 	df = pd.DataFrame({'pred1': [], 'pred2': [], 'cosine_sim': []})
+	pairs = [(x,y, knowledgebase(x)) for x in enumerating for y in counting if knowledgebase(x) == knowledgebase(y)]
+	for predE, predC, kb_name in pairs:
+		if kb_name in ['dbp_map', 'dbp_raw']:
+			labels = get_label_dbpedia([predE, predC])
+		elif kb_name == 'wd':
+			labels = get_label_wikidata([predE, predC])
+		elif kb_name == 'fb':
+			labels = get_label_freebase([predE, predC])
+		else:
+			continue
 
-	for kb_name in kb_names:
-		bufferlist = []
-		with open(fpath+kb_name+'_linguistic_alignment.csv') as fp:
-			reader = csv.reader(fp)
-			row_num = 0
-			pred_list = [x.split('_inv')[0] for x in enumerating]
-			pred_list.extend(counting)
-			pred_list = set(pred_list)
-			for row in tqdm(reader):
-				if row_num == 0:
-					row_num += 1
-					continue
-				if any(prefix+row[0] in pred_list for prefix in kb_prefixes) and any(prefix+row[1] in pred_list for prefix in kb_prefixes):
-					pred1 = None
-					pred2 = None
-					for prefix in kb_prefixes:
-						if pred1 is None and prefix+row[0] in pred_list:
-							pred1 = prefix+row[0]
-						if pred2 is None and prefix+row[1] in pred_list:
-							pred2 = prefix+row[1]
-					if pred1 is not None and pred2 is not None:
-						# df = df.append({'pred1': pred1, 'pred2': pred2, 'cosine_sim': row[2]}, ignore_index=True)
-						bufferlist.append(pd.Series([pred1,pred2,row[2]], index=['pred1', 'pred2', 'cosine_sim']))
+		e_label = [x for x in labels[predE] if x in model]
+		c_label = [x for x in labels[predC] if x in model]
 
-					if len(bufferlist) == 1000:
-						df = df.append(bufferlist, ignore_index=True)
-						bufferlist = []
-			if len(bufferlist) > 0:
-						df = df.append(bufferlist, ignore_index=True)
-						bufferlist = []
-
-	print('linguistic dataframe len: ',len(df))
-	# print(df)
+		cosine__sim = model.n_similarity(e_label, c_label) if (len(e_label)>0 and len(c_label)>0) else 0
+		df = df.append({'predE': predE, 'predC': predC, 'cosine_sim': cosine_sim}, ignore_index=True)
+	wd_labels={}
 	return df
+
+# def load_linguistic_metrics(fpath):
+# 	kb_prefixes = ['http://dbpedia.org/ontology/', 'http://dbpedia.org/property/', 
+# 					'http://www.wikidata.org/prop/direct/', 'http://www.wikidata.org/prop/direct-normalized/' 
+# 					'http://rdf.freebase.com/ns/', 'http://rdf.freebase.com/key/']
+# 	kb_names = ['dbp_map', 'dbp_raw', 'wd', 'fb']
+# 	df = pd.DataFrame({'pred1': [], 'pred2': [], 'cosine_sim': []})
+
+# 	for kb_name in kb_names:
+# 		bufferlist = []
+# 		with open(fpath+kb_name+'_linguistic_alignment.csv') as fp:
+# 			reader = csv.reader(fp)
+# 			row_num = 0
+# 			pred_list = [x.split('_inv')[0] for x in enumerating]
+# 			pred_list.extend(counting)
+# 			pred_list = set(pred_list)
+# 			for row in tqdm(reader):
+# 				if row_num == 0:
+# 					row_num += 1
+# 					continue
+# 				if any(prefix+row[0] in pred_list for prefix in kb_prefixes) and any(prefix+row[1] in pred_list for prefix in kb_prefixes):
+# 					pred1 = None
+# 					pred2 = None
+# 					for prefix in kb_prefixes:
+# 						if pred1 is None and prefix+row[0] in pred_list:
+# 							pred1 = prefix+row[0]
+# 						if pred2 is None and prefix+row[1] in pred_list:
+# 							pred2 = prefix+row[1]
+# 					if pred1 is not None and pred2 is not None:
+# 						# df = df.append({'pred1': pred1, 'pred2': pred2, 'cosine_sim': row[2]}, ignore_index=True)
+# 						bufferlist.append(pd.Series([pred1,pred2,row[2]], index=['pred1', 'pred2', 'cosine_sim']))
+
+# 					if len(bufferlist) == 1000:
+# 						df = df.append(bufferlist, ignore_index=True)
+# 						bufferlist = []
+# 			if len(bufferlist) > 0:
+# 						df = df.append(bufferlist, ignore_index=True)
+# 						bufferlist = []
+
+# 	print('linguistic dataframe len: ',len(df))
+# 	# print(df)
+# 	return df
 
 def ptile90_match_ratio(row):
 	if row['ptile90ne'] > row['ptile90int']:
@@ -81,7 +161,8 @@ def main():
 	enumerating = load_prednames('./prednames/enumerating.csv')
 	counting = load_prednames('./prednames/counting.csv')
 	cooccur_metrics = load_cooccur_metrics(metric_path+'metrics_req/cooccur_alignment.csv')
-	linguistic_metrics = load_linguistic_metrics(metric_path+'metrics_req/')
+	# linguistic_metrics = load_linguistic_metrics(metric_path+'metrics_req/')
+	linguistic_metrics = get_linguistic_metrics()
 	
 	cooccur_metrics['exact_match_ratio'] = cooccur_metrics['exact_match'] / cooccur_metrics['n']
 	cooccur_metrics['ptile90match'] = cooccur_metrics.apply(ptile90_match_ratio, axis=1)

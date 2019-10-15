@@ -18,7 +18,7 @@ var predrequest = new XMLHttpRequest();
 
 // url to the data directory which has the wikidata/wd_predicates.json and dbpedia/dbp_predicates.json files
 // SimpleHTTPServer invoked in localhost on demo directory
-var localpath ='http://127.0.0.1:5000/static/';
+var localpath ='http://localhost:9000/static/';
 var flaskurl = 'http://localhost:5000/spoquery'; 
 
 /** server edits**/
@@ -28,8 +28,9 @@ var flaskurl = 'http://localhost:5000/spoquery';
 // function to process the jsonp (json padding) function returned by the json files and
 // populate the predicate options
 function jsonCallback (result){
-  var jsonOptions = result[option];
-  Object.keys(jsonOptions).forEach(function(itemtype) {
+  var jsonOptions = result;
+  // var jsonOptions = result[option];
+  Object.keys(result).forEach(function(itemtype) {
     jsonOptions[itemtype].forEach(function(item) {
       if (!(item in predicateIDlist)) {
         var dropdown_option = document.createElement('option');
@@ -92,12 +93,15 @@ $.fn.predautocomplete = function () {
   var fname, path;
   // console.log('option in predautocomp:::'+option);
   if (option === 'wikidata') {
-    fname = 'wd_predicates.json';
+    fname = 'wikidata.json';
   }
-  else {
-    fname = 'dbp_predicates.json';
+  else if (option == 'dbpedia_raw') {
+    fname = 'dbpedia_raw.json';
   }
-  path = localpath + 'data/' + option + '/' + fname;
+  else if (option == 'dbpedia_mapped') {
+    fname = 'dbpedia_mapped.json'
+  }
+  path = localpath + 'data/set_predicates/' + fname;
   $.ajax({
     type: 'GET',
     url : path,
@@ -246,6 +250,7 @@ function insert_trunc_and_full_result (entity) {
 
 // funtion to populate table after getting results
 function displayresponse (results) {
+  objectIDlist = subjectIDlist
   var triple1={'s1': {}, 'p1': '', 'o1': {}};
   var triple2={'direct': [], 'inverse': []};
   console.log(results);
@@ -357,10 +362,10 @@ function displayresponse (results) {
   }
   if (triple2['direct'].length > 0){
     // Modify heading of related predicates
-    if (results.get == 'enumE'){
+    if (results.get == 'predE'){
       $(".second > thead > tr > td").empty().append('<strong> Related Enumerating Predicates </strong>');
     }
-    else if (results.get == 'enumG'){
+    else if (results.get == 'predC'){
       $(".second > thead > tr > td").empty().append('<strong> Related Counting Predicates </strong>');
     }
     // Add row child for each related predicate SPO triple
@@ -376,7 +381,7 @@ function displayresponse (results) {
         //   add_child(triple1['s1'], triple2['direct'][i]['p2'], triple2['direct'][i]['o2']);
         // }
         // add related results 
-        if ((results['get'] === 'enumG' && triple1['s1']['full'].indexOf(';') === -1) || (results['get'] === 'enumE')){
+        if ((results['get'] === 'predC' && triple1['s1']['full'].indexOf(';') === -1) || (results['get'] === 'predE')){
           add_child(triple1['s1'], triple2['direct'][i]['p2'], triple2['direct'][i]['o2']);
         }
       }
@@ -384,10 +389,10 @@ function displayresponse (results) {
   }
   if (triple2['inverse'].length > 0) {
     // Modify heading of related predicates
-    if (results.get == 'enumE'){
+    if (results.get == 'predE'){
       $(".second > thead > tr > td").empty().append('<strong> Related Enumerating Predicates </strong>');
     }
-    else if (results.get == 'enumG'){
+    else if (results.get == 'predC'){
       $(".second > thead > tr > td").empty().append('<strong> Related Counting Predicates </strong>');
     }
     // Add row child for each related predicate SPO triple
@@ -395,7 +400,7 @@ function displayresponse (results) {
     // if (triple1.s1.length > 0) {
     if (triple1.s1.hasOwnProperty('trunc')){
       for (var i=0; i<len; i++){
-        if (results['get'] ===  'enumG') {
+        if (results['get'] ===  'predC') {
           if ('s1' in results && triple1['s1']['full'].indexOf(';') === -1) {
             // add inv results if s1 is a single entity
               // console.log(triple1.s1.full, triple1.s1.full.indexOf(';'));
@@ -408,7 +413,7 @@ function displayresponse (results) {
               add_child(triple1['o1'], triple2['inverse'][i]['p2'], triple2['inverse'][i]['o2']);
           }
         }
-        if (results['get'] === 'enumE') {
+        if (results['get'] === 'predE') {
           add_child(triple2['inverse'][i]['s2'], triple2['inverse'][i]['p2'], triple1['s1']);
         }
       }
@@ -492,7 +497,7 @@ $.fn.dbpautocomplete = function (entities, IDlist, val) {
   return;
 }
 
-// function to complaete sample queries
+// function to complete sample queries
 function samplequeries(payload){
   displayinfo(payload['waitmsg']);
   result_refresh();
@@ -544,7 +549,7 @@ $(document).ready(function () {
     }
 
     // check if predicate is enumerating
-    if ($(this).val() !== '' && $(this).val() in predicateIDlist && predicateIDlist[$(this).val()]['type'] === 'enumG') {
+    if ($(this).val() !== '' && $(this).val() in predicateIDlist && predicateIDlist[$(this).val()]['type'] === 'predC') {
       $("#object").val('Integer valued');
       $("#object").prop('disabled', true);
       if ($("#subject").attr("disabled")) {
@@ -582,7 +587,7 @@ $(document).ready(function () {
           $(this).wdautocomplete(subentities, subjectIDlist, val);
         }
       }
-      else if (val !== '' && option === 'dbpedia'){
+      else if (val !== '' && (option === 'dbpedia_raw' || option === 'dbpedia_mapped')){
         if (val in subjectIDlist) {
           subjectID = subjectIDlist[$(this).val()];
           subjectID = subjectID.split('/');
@@ -634,7 +639,7 @@ $(document).ready(function () {
         $(this).wdautocomplete(objentities, objectIDlist, val);
       }
     }
-    else if (val !== '' && option === 'dbpedia'){
+    else if (val !== '' && (option === 'dbpedia_raw' || option === 'dbpedia_mapped')){
       if (val in objectIDlist) {
         objectID = objectIDlist[val];
         objectID = objectID.split('/');
@@ -651,31 +656,45 @@ $(document).ready(function () {
   // ******************************** KB selection events **************************************//
   // changes made on selecting a KB preference
   $("#WD-btn").click(function () {
-    if (option === 'dbpedia') {
+    if (option !== 'wikidata') {
       // refresh options when KB changes
       form_refresh();
     }
     option = 'wikidata';
     $("#WD-btn").addClass("btn-outline-infp").removeClass("btn-link");
-    $("#DBP-btn").addClass("btn-link").removeClass("btn-outline-info");
+    $("#DBPr-btn").addClass("btn-link").removeClass("btn-outline-info");
+    $("#DBPm-btn").addClass("btn-link").removeClass("btn-outline-info");
     
     $("#predicate").predautocomplete();
   });
-  $("#DBP-btn").click(function () {
-    if (option === 'wikidata') {
+  $("#DBPr-btn").click(function () {
+    if (option !== 'dbpedia_raw') {
       // refresh options when KB changes
       form_refresh();
     }
-    option = 'dbpedia';
+    option = 'dbpedia_raw';
     $("#WD-btn").addClass("btn-link").removeClass("btn-outline-info");
-    $("#DBP-btn").addClass("btn-outline-info").removeClass("btn-link");
+    $("#DBPm-btn").addClass("btn-link").removeClass("btn-outline-info");
+    $("#DBPr-btn").addClass("btn-outline-info").removeClass("btn-link");
+    $("#predicate").predautocomplete();
+  });
+  $("#DBPm-btn").click(function () {
+    if (option !== 'dbpedia_mapped') {
+      // refresh options when KB changes
+      form_refresh();
+    }
+    option = 'dbpedia_mapped';
+    $("#WD-btn").addClass("btn-link").removeClass("btn-outline-info");
+    $("#DBPr-btn").addClass("btn-link").removeClass("btn-outline-info");
+    $("#DBPm-btn").addClass("btn-outline-info").removeClass("btn-link");
     $("#predicate").predautocomplete();
   });
   // ******************************** form refresh events **************************************//
   $(".refresh").click(function () {
     option = 'wikidata';
-    $("#WD-btn").addClass("btn-outline-infp").removeClass("btn-link");
-    $("#DBP-btn").addClass("btn-link").removeClass("btn-outline-info");
+    $("#WD-btn").addClass("btn-outline-info").removeClass("btn-link");
+    $("#DBPr-btn").addClass("btn-link").removeClass("btn-outline-info");
+    $("#DBPm-btn").addClass("btn-link").removeClass("btn-outline-info");
     $.when(form_refresh(), result_refresh()).then($("#predicate").predautocomplete());
     // console.log(predicateIDlist);
   });
@@ -734,70 +753,106 @@ $(document).ready(function () {
   });
 
   // ******************************** pre-defined queries ******************************//
-  $('#example1').on('click', function () {
+  $('#wd_eg_1').on('click', function () {
     var payload = {
       waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
-      subject: "Grey's Anatomy",
-      subjectID: "Q438406",
-      predicate: "P170: creator",
+      subject: "Microsoft",
+      subjectID: "Q2283",
+      predicate: "P1128: employees",
       object: "",
       kbname: 'wikidata',
       endmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>"
     };
     samplequeries(payload);
   });
-
-  $('#example2').on('click', function () {
+  $('#dbpm_eg_1').on('click', function () {
     var payload = {
       waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
-      subject: "McGill University",
-      subjectID: "https://en.wikipedia.org/wiki/McGill_University",
-      predicate: "dbo: faculty size",
+      subject: "Wyoming Legislature",
+      subjectID: "Wyoming_Legislature",
+      predicate: "dbo: number of members",
       object: "",
-      kbname: "dbpedia",
+      kbname: 'dbpedia_mapped',
       endmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>"
     };
     samplequeries(payload);
   });
-
-  $('#example3').on('click', function () {
+  $('#dbpr_eg_1').on('click', function () {
     var payload = {
       waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
-      subject: "World War I",
-      subjectID: "Q361",
-      predicate: "P1120: number of deaths",
+      subject: "Leander Paes",
+      subjectID: "Leander_Paes",
+      predicate: "dbp: gold",
       object: "",
-      kbname: "wikidata",
+      kbname: 'dbpedia_raw',
       endmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>"
     };
     samplequeries(payload);
   });
+  // $('#example1').on('click', function () {
+  //   var payload = {
+  //     waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
+  //     subject: "Grey's Anatomy",
+  //     subjectID: "Q438406",
+  //     predicate: "P170: creator",
+  //     object: "",
+  //     kbname: 'wikidata',
+  //     endmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>"
+  //   };
+  //   samplequeries(payload);
+  // });
 
-  $('#example4').on('click', function () {
-    var payload = {
-      waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
-      subject: "Frankfurt Airport",
-      subjectID: "http://wikipedia.org/wiki/Frankfurt_Airport",
-      predicate: "dbo: hub airport",
-      object: "",
-      kbname: "dbpedia",
-      endmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>"
-    };
-    samplequeries(payload);
-  });
+  // $('#example2').on('click', function () {
+  //   var payload = {
+  //     waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
+  //     subject: "McGill University",
+  //     subjectID: "https://en.wikipedia.org/wiki/McGill_University",
+  //     predicate: "dbo: faculty size",
+  //     object: "",
+  //     kbname: "dbpedia",
+  //     endmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>"
+  //   };
+  //   samplequeries(payload);
+  // });
+
+  // $('#example3').on('click', function () {
+  //   var payload = {
+  //     waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
+  //     subject: "World War I",
+  //     subjectID: "Q361",
+  //     predicate: "P1120: number of deaths",
+  //     object: "",
+  //     kbname: "wikidata",
+  //     endmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>"
+  //   };
+  //   samplequeries(payload);
+  // });
+
+  // $('#example4').on('click', function () {
+  //   var payload = {
+  //     waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
+  //     subject: "Frankfurt Airport",
+  //     subjectID: "http://wikipedia.org/wiki/Frankfurt_Airport",
+  //     predicate: "dbo: hub airport",
+  //     object: "",
+  //     kbname: "dbpedia",
+  //     endmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>"
+  //   };
+  //   samplequeries(payload);
+  // });
   
-  $('#example5').on('click', function () {
-    var payload = {
-      waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
-      subject: "Game of Thrones",
-      subjectID: "Q23572",
-      predicate: "P179: series",
-      object: "",
-      kbname: "wikidata",
-      endmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>"
-    };
-    samplequeries(payload);
-  });
+  // $('#example5').on('click', function () {
+  //   var payload = {
+  //     waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
+  //     subject: "Game of Thrones",
+  //     subjectID: "Q23572",
+  //     predicate: "P179: series",
+  //     object: "",
+  //     kbname: "wikidata",
+  //     endmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>"
+  //   };
+  //   samplequeries(payload);
+  // });
   // ******************************** result events ******************************//
   // $("#p1").on('click', function () {
   //   if ($("#s1").is(":hidden")) {
