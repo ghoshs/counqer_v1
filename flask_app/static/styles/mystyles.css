@@ -1,11 +1,74 @@
-.footer {
-  position: fixed;
-  left: 0;
-  bottom: 0;
-  width: 150%;
-  background-color: white;
+/*theme {
+  color: #1F271B;
+  color: #19647E;
+  color: #28AFB0;
+  color: #F4D35E;
+  color: #EE964B;
+}*/
+body {
+  background-color: rgba(31,39,27,1);
+}
+
+#header {
+  background-color: rgba(40,175,176,1);
   color: black;
+  margin-bottom: 0px !important;
+}
+
+nav {
+  padding: 0px !important;
+  width: 100%;
+}
+
+nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: rgba(31,39,27,1);
+}
+
+#navbar li {
+  float: left;
+}
+
+#navbar li a {
+  display: block;
+  color: white;
   text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+
+/* Change the link color to #111 (black) on hover */
+#navbar li a:hover {
+  background-color: #111;
+}
+
+#navbar .active, #navbar .active:hover {
+  background-color: #28AFB0;
+}
+
+.sticky {
+  position: fixed;
+  top: 0;
+  width: 100%;
+}
+
+.body {
+  min-height: 100vh;
+  padding: 10px;
+  padding-top: 48px;
+  padding-bottom: 60px;
+  background-color: rgba(255,255,255,1);
+}
+
+.body > .row {
+  margin: 0;
+}
+
+.row [class*='col-'] {
+  padding: 0px;
 }
 
 .vertical-align {
@@ -15,45 +78,57 @@
   flex-direction: row;
 }
 
-/*.dropdown {
-  position: relative;
-  display: inline-block;
-*/}
-/*
-.dropdown-content {
-  display: none;
-  position: absolute;
-  background-color: transparent;
-  min-width: 50px;
-  max-width: 600px !important;
-  box-shadow: 0px 2px 6px 0px rgba(0,0,0,0.2);
-  padding: 2px 6px;
-  z-index: 1;
+#home {
+  padding-top: 0px !important;
 }
-*/
-/*.dropdown:hover .dropdown-content {
-	display: block;
-}*/
 
-.no-gutter > [class*='col-'] {
+#home [class*='col-sm-9'] {
+  padding-right: 5px;
+}
+
+#examples {
+  padding-left: 10px;
+}
+
+#examples .btn {
+  padding-left: 10px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  font-size: 0.9em;
+}
+
+.no-gutter, .no-gutter [class*='col-'] {
     padding-right:0;
     padding-left:0;
+    margin: 0px;
 }
 
-table {
+table.first, table.second {
   border-collapse: separate !important;
   border-radius: 1em;
   border: 1px solid #ddd;
 }
 
-table > thead > tr > td {
+table.first td, table.second td {
   width: 33%;
   vertical-align: middle !important;
+  padding-left: 0px;
+  padding-right: 0px;
 }
 
-table > tbody > tr > td {
+table.first .btn, table.second .btn {
+  padding: 8px;
+}
+
+table.searchable {
+  width: 100%;
+}
+
+table.searchable th, table.searchable td {
   width: 33%;
   vertical-align: middle !important;
+  padding-left: 0px;
+  padding-right: 0px;
 }
 
 .fullresult {
@@ -66,4 +141,36 @@ table > tbody > tr > td {
 
 .partial:hover .fullresult{
   display: block;
+}
+
+hr {
+  border-color: rgba(31,39,27,1);
+}
+
+table.dataTable thead .sorting:after,
+table.dataTable thead .sorting:before,
+table.dataTable thead .sorting_asc:after,
+table.dataTable thead .sorting_asc:before,
+table.dataTable thead .sorting_asc_disabled:after,
+table.dataTable thead .sorting_asc_disabled:before,
+table.dataTable thead .sorting_desc:after,
+table.dataTable thead .sorting_desc:before,
+table.dataTable thead .sorting_desc_disabled:after,
+table.dataTable thead .sorting_desc_disabled:before {
+bottom: .5em;
+}
+
+#footer {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 60px;
+  padding: 10px;
+  background-color: rgba(40,175,176,1);
+  color: white;
+}
+
+#footer a {
+  color: white;
 }

@@ -16,14 +16,15 @@ var predicateID = '';
 var option='wikidata';
 var predrequest = new XMLHttpRequest();
 
+var ftoption = 'wikidata';
 // url to the data directory which has the wikidata/wd_predicates.json and dbpedia/dbp_predicates.json files
 // SimpleHTTPServer invoked in localhost on demo directory
 var localpath ='http://localhost:9000/static/';
-var flaskurl = 'http://localhost:5000/spoquery'; 
+var flaskurl = 'http://localhost:5000/'; 
 
 /** server edits**/
 // var localpath ='https://counqer.mpi-inf.mpg.de/static/';
-// var flaskurl = 'https://counqer.mpi-inf.mpg.de/spoquery'; 
+// var flaskurl = 'https://counqer.mpi-inf.mpg.de/'; 
 
 // function to process the jsonp (json padding) function returned by the json files and
 // populate the predicate options
@@ -47,6 +48,7 @@ function jsonCallback (result){
 // function for displaying information messages
 function displayinfo(message) {
   $('#displayalert').children().replaceWith(message);
+  $('#displayalert').show();
 }
 
 // function to refresh results
@@ -139,22 +141,17 @@ function gettriples(response) {
 }
 
 // add results to related predicates
-function add_child (s2, p2, o2) {
+function add_child (s2, p2, o2, pstat, direction='inverse', type='predE') {
   // console.log('add child ', s2, o2);
   if ($(".second").is(":hidden")) {
     $(".second").show();
   }
-  // text = '<div class="row vertical-align">' +
-  //         '<div class="col btn s2">' + s2 + '</div>'+
-  //         '<div class="col btn btn-warning p2">' + p2 + '</div>' +
-  //         '<div class="col btn o2">' + o2 + '</div>'+
-  //         '</div>';
-  // $(".second").append(text);
   text = '<tr>' +
          '<td class="s2 partial">' + insert_trunc_and_full_result(s2) + '</td>' +
-         '<td> <div class="col-12 btn btn-warning p2">' + p2 + '</div></td>' +
+         '<td > <div class="col-12 btn btn-warning p2">' + p2 + '</div></td>' +
          '<td class="o2 partial">' + insert_trunc_and_full_result(o2) + '</td>' +
-         '</tr>';
+         '</tr>' +
+         '<tr class="p2stat" style="display: none">' + insert_pstats(pstat, direction, type) + '</tr>';
   $(".second > tbody").append(text);
   // console.log(text);
 }
@@ -248,6 +245,31 @@ function insert_trunc_and_full_result (entity) {
   return ('<p class="truncresult">' + entity['trunc'] + '</p> <p class="fullresult">' + entity['full'] +'</p>');
 }
 
+// function to add elements containing predicate statistics
+function insert_pstats (pstats, direction, type='predE') {
+  console.log(pstats);
+  var val = '';
+  if (type == 'predC')  {
+    if (pstats[0]['numeric_avg']) {
+      val = pstats[0]['numeric_avg'].toFixed(3);
+    }
+    else {
+      val = '-'
+    }
+    text = '<td colspan="3"> Average value: ' + val + ' </td>'
+  }
+  else {
+    if (pstats[0]['persub_avg_ne']) {
+      val = pstats[0]['persub_avg_ne'].toFixed(3);
+    }
+    else {
+      val = '-'
+    }
+    text = '<td colspan="3"> Average entities per subject: ' + val + ' </td>'
+  }
+  return(text);
+}
+
 // funtion to populate table after getting results
 function displayresponse (results) {
   objectIDlist = subjectIDlist
@@ -256,7 +278,7 @@ function displayresponse (results) {
   console.log(results);
   if ('error' in results) {
     if (results.error === 'No co-occurring pair'){
-      var msg = "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> We could not retrieve any related results!</div>";
+      var msg = "<div class='alert alert-warning alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> We could not retrieve any related results!<button type='button' class='close' aria-label='close'> <span aria-hidden='true'>&times;</span> </button></div>";
       displayinfo(msg);
     }
   }
@@ -290,7 +312,7 @@ function displayresponse (results) {
     triple1['o1']['full'] = triple1['o1']['trunc'];
   }
   if ('error' in results['response'] && 'error' in results['response_inv']) {
-    var msg = "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> We could not retrieve any results!</div>";
+    var msg = "<div class='alert alert-warning alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> We could not retrieve any results!<button type='button' class='close' aria-label='close'> <span aria-hidden='true'>&times;</span> </button></div>";
     displayinfo(msg);
   }
   else if ('error' in results['response_inv']) {
@@ -344,11 +366,24 @@ function displayresponse (results) {
       $("#s1").html(insert_trunc_and_full_result(triple1['s1']));
       $("#p1").html(triple1['p1']);
       $("#o1").html(insert_trunc_and_full_result(triple1['o1']));
+      if (results['get'] == 'predE'){
+        $("#p1stat").html(insert_pstats(results['stats']['response'][triple1['p1']], 'direct', 'predC'));
+      }
+      else {
+        $("#p1stat").html(insert_pstats(results['stats']['response'][triple1['p1']], 'direct'));
+      }
+      
     }
     else {
       $("#s1").html(insert_trunc_and_full_result(triple1['o1']));
       $("#p1").html(triple1['p1']);
       $("#o1").html(insert_trunc_and_full_result(triple1['s1']));
+      if (results['get'] == 'predE'){
+        $("#p1stat").html(insert_pstats(results['stats']['response_inv'][triple1['p1']], 'inverse', 'predC'));
+      }
+      else {
+        $("#p1stat").html(insert_pstats(results['stats']['response_inv'][triple1['p1']], 'inverse'));
+      }
     }
     // console.log('s1.html: ', $("#s1").html());
     // console.log('p1.html: ', $("#p1").html());
@@ -356,7 +391,7 @@ function displayresponse (results) {
   }
   else {
     if (triple2['direct'].length > 0 || triple2['inverse'].length > 0){
-      var msg = "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> We could not retrieve main results!! Please check the related results</div>";
+      var msg = "<div class='alert alert-warning alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> We could not retrieve main results!! Please check the related results<button type='button' class='close' aria-label='close'> <span aria-hidden='true'>&times;</span> </button></div>";
       displayinfo(msg);
     }
   }
@@ -382,7 +417,7 @@ function displayresponse (results) {
         // }
         // add related results 
         if ((results['get'] === 'predC' && triple1['s1']['full'].indexOf(';') === -1) || (results['get'] === 'predE')){
-          add_child(triple1['s1'], triple2['direct'][i]['p2'], triple2['direct'][i]['o2']);
+          add_child(triple1['s1'], triple2['direct'][i]['p2'], triple2['direct'][i]['o2'], results['stats']['response'][triple2['direct'][i]['p2']], 'direct', results['get']);
         }
       }
     }
@@ -404,17 +439,17 @@ function displayresponse (results) {
           if ('s1' in results && triple1['s1']['full'].indexOf(';') === -1) {
             // add inv results if s1 is a single entity
               // console.log(triple1.s1.full, triple1.s1.full.indexOf(';'));
-              add_child(triple1['s1'], triple2['inverse'][i]['p2'], triple2['inverse'][i]['o2']);
+              add_child(triple1['s1'], triple2['inverse'][i]['p2'], triple2['inverse'][i]['o2'], results['stats']['response_inv'][triple2['inverse'][i]['p2']], 'inverse', 'predC');
           }
           // queried object is the subject for related predicates
           else if (triple1['o1']['full'].indexOf(';') === -1){
             // add inv results if o1 is a single entity
               // console.log('inv: ', triple1.o1.full, triple1.o1.full.indexOf(';'));
-              add_child(triple1['o1'], triple2['inverse'][i]['p2'], triple2['inverse'][i]['o2']);
+              add_child(triple1['o1'], triple2['inverse'][i]['p2'], triple2['inverse'][i]['o2'], results['stats']['response_inv'][triple2['inverse'][i]['p2']], 'inverse', 'predC');
           }
         }
         if (results['get'] === 'predE') {
-          add_child(triple2['inverse'][i]['s2'], triple2['inverse'][i]['p2'], triple1['s1']);
+          add_child(triple2['inverse'][i]['s2'], triple2['inverse'][i]['p2'], triple1['s1'], results['stats']['response_inv'][triple2['inverse'][i]['p2']]);
         }
       }
     }
@@ -499,7 +534,11 @@ $.fn.dbpautocomplete = function (entities, IDlist, val) {
 
 // function to complete sample queries
 function samplequeries(payload){
-  displayinfo(payload['waitmsg']);
+  var waitmsg = "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>";
+  var endmsg = "<div class='alert alert-success alert-success' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!<button type='button' class='close' aria-label='close'> <span aria-hidden='true'>&times;</span> </button></div>";
+  var errmsg = "<div class='alert alert-warning alert-warning' style='margin-bottom: 0px'><strong>!!</strong> Sorry we ran into some problems while running this query!<button type='button' class='close' aria-label='close'> <span aria-hidden='true'>&times;</span> </button></div>";
+    
+  displayinfo(waitmsg);
   result_refresh();
   subjectIDlist[payload['subject']] = payload['subjectID'];
   $("#subject").val(payload['subject']);
@@ -508,7 +547,7 @@ function samplequeries(payload){
   option = payload['kbname'];
   $.ajax({
     type: 'GET',
-    url: flaskurl,
+    url: flaskurl+'spoquery',
     contentType: 'application/json',
     dataType: 'json',
     data: {
@@ -520,21 +559,42 @@ function samplequeries(payload){
     success: function(result, status){
       // console.log(result);
       // console.log(status);
-      displayinfo(payload['endmsg']);
+      displayinfo(endmsg);
       displayresponse(result);
       // predicateIDlist = {};
       // $("#predicate").predautocomplete();
       subjectIDlist = {};
     },
     error: function(){
+      displayinfo(errmsg);
       console.log('error in flask get');
     }
   });
 }
 
+// free text form refresh
+function ft_form_refresh() {
+  // 
+}
+
+
+// generate table entries for top alignments from each item
+function get_table_data(item) {
+  var asterix = '';
+  if (parseFloat(item['score']).toFixed(3) > 0.9) {
+    asterix = '*';
+  }
+  var htmldata = '<tr>' + 
+                 '<td><a href="' + item['predE'] + '">' + item['predE'].split('/').pop() + '</a></td>' +
+                 '<td><a href="' + item['predC'] + '">' + item['predC'].split('/').pop() + '</a></td>' +
+                 '<td>' + parseFloat(item['score']).toFixed(3) + asterix + '</td>' +
+                 '</tr>';
+  return htmldata;
+}
+
 // ******************************** on document ready **************************************//
 $(document).ready(function () {
-  // ******************************** predicate events **************************************//
+  // ******************************** #home predicate events **************************************//
   // populate default predicate options (Wikidata) 
   $("#predicate").predautocomplete();
   // on active input in predicate box
@@ -561,7 +621,7 @@ $(document).ready(function () {
       $("#object").prop('disabled', false); 
     }
   });
-  // ******************************** subject events **************************************//
+  // ******************************** #home subject events **************************************//
   // Empty dropdown content if no input is given
   $("#subject").blur(function () {
     if ($(this).val() === ''){
@@ -576,7 +636,7 @@ $(document).ready(function () {
   // disable object if object input is non-empty
     var val = $(this).val();
     if (val !== '') {
-      $("#object").prop('disabled', true);
+      // $("#object").prop('disabled', true);
       // call for autocomplete options depending on KB option
       // set subject ID on proper matching input
       if (val !== '' && option === 'wikidata') {
@@ -601,9 +661,9 @@ $(document).ready(function () {
         subjectID = '';
       }
     }
-    else {
-     $("#object").prop('disabled', false); 
-    }
+    // else {
+    //  $("#object").prop('disabled', false); 
+    // }
     return;
   });
   // $("#subject").on('change', function () {
@@ -612,47 +672,47 @@ $(document).ready(function () {
   // });
   // ******************************** object events **************************************//
   // Empty dropdown content if no input is given
-  $("#object").blur(function () {
-    if ($(this).val() === ''){
-      $('#objentities').empty();
-      objectIDlist = {};
-    }
-  });
-  // on active input in object box
-  $("#object").on('input change', function () {
-    // disable subject if object input is non-empty
-    var val = $(this).val();
-    if (val !== '') {
-      $("#subject").prop('disabled', true);
-    }
-    else {
-     $("#subject").prop('disabled', false); 
-    }
+  // $("#object").blur(function () {
+  //   if ($(this).val() === ''){
+  //     $('#objentities').empty();
+  //     objectIDlist = {};
+  //   }
+  // });
+  // // on active input in object box
+  // $("#object").on('input change', function () {
+  //   // disable subject if object input is non-empty
+  //   var val = $(this).val();
+  //   if (val !== '') {
+  //     $("#subject").prop('disabled', true);
+  //   }
+  //   else {
+  //    $("#subject").prop('disabled', false); 
+  //   }
 
-    // call for autocomplete options depending on KB option
-    // set subject ID on proper matching input
-    if (val !== '' && option === 'wikidata') {
-      if (val.split(':')[0] in objectIDlist){
-        objectID = objectIDlist[val.split(':')[0]];
-      }
-      else {
-        $(this).wdautocomplete(objentities, objectIDlist, val);
-      }
-    }
-    else if (val !== '' && (option === 'dbpedia_raw' || option === 'dbpedia_mapped')){
-      if (val in objectIDlist) {
-        objectID = objectIDlist[val];
-        objectID = objectID.split('/');
-        objectID = objectID[objectID.length-1];
-      }
-      else {
-        $(this).dbpautocomplete(objentities, objectIDlist, val);
-      }
-    }
-    else {
-      objectID = '';
-    }
-  });
+  //   // call for autocomplete options depending on KB option
+  //   // set subject ID on proper matching input
+  //   if (val !== '' && option === 'wikidata') {
+  //     if (val.split(':')[0] in objectIDlist){
+  //       objectID = objectIDlist[val.split(':')[0]];
+  //     }
+  //     else {
+  //       $(this).wdautocomplete(objentities, objectIDlist, val);
+  //     }
+  //   }
+  //   else if (val !== '' && (option === 'dbpedia_raw' || option === 'dbpedia_mapped')){
+  //     if (val in objectIDlist) {
+  //       objectID = objectIDlist[val];
+  //       objectID = objectID.split('/');
+  //       objectID = objectID[objectID.length-1];
+  //     }
+  //     else {
+  //       $(this).dbpautocomplete(objentities, objectIDlist, val);
+  //     }
+  //   }
+  //   else {
+  //     objectID = '';
+  //   }
+  // });
   // ******************************** KB selection events **************************************//
   // changes made on selecting a KB preference
   $("#WD-btn").click(function () {
@@ -723,7 +783,7 @@ $(document).ready(function () {
       result_refresh();
       $.ajax({
         type: 'GET',
-        url: flaskurl,
+        url: flaskurl+'spoquery',
         contentType: 'application/json',
         dataType: 'json',
         data: {
@@ -735,11 +795,13 @@ $(document).ready(function () {
         success: function(result, status){
           // console.log(result);
           // console.log(status);
-          var msg = "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>";
+          var msg = "<div class='alert alert-success alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!<button type='button' class='close' aria-label='close'> <span aria-hidden='true'>&times;</span> </button></div>";
           displayinfo(msg);
           displayresponse(result);
         },
         error: function(){
+          var errmsg = "<div class='alert alert-warning alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Sorry we ran into some problems while running this query!<button type='button' class='close' aria-label='close'> <span aria-hidden='true'>&times;</span> </button></div>"
+          displayinfo(errmsg);
           console.log('error in flask get');
         }
       }); 
@@ -755,40 +817,94 @@ $(document).ready(function () {
   // ******************************** pre-defined queries ******************************//
   $('#wd_eg_1').on('click', function () {
     var payload = {
-      waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
       subject: "Microsoft",
       subjectID: "Q2283",
       predicate: "P1128: employees",
       object: "",
-      kbname: 'wikidata',
-      endmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>"
+      kbname: 'wikidata'
     };
     samplequeries(payload);
   });
   $('#dbpm_eg_1').on('click', function () {
     var payload = {
-      waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
       subject: "Wyoming Legislature",
       subjectID: "Wyoming_Legislature",
       predicate: "dbo: number of members",
       object: "",
-      kbname: 'dbpedia_mapped',
-      endmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>"
+      kbname: 'dbpedia_mapped'
     };
     samplequeries(payload);
   });
   $('#dbpr_eg_1').on('click', function () {
     var payload = {
-      waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
       subject: "Leander Paes",
       subjectID: "Leander_Paes",
       predicate: "dbp: gold",
       object: "",
-      kbname: 'dbpedia_raw',
-      endmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong> Hope the results satisfy your curiosity!</div>"
+      kbname: 'dbpedia_raw'
     };
     samplequeries(payload);
   });
+  $('#wd_ideal_1').on('click', function () {
+    var payload = {
+      subject: "James A. Garfield",
+      subjectID: "Q34597",
+      predicate: "P40: child",
+      object: "",
+      kbname: 'wikidata'
+    };
+    samplequeries(payload);
+  });
+  $('#wd_ideal_2').on('click', function () {
+    var payload = {
+      subject: "World War I",
+      subjectID: "Q361",
+      predicate: "P1120: number of deaths",
+      object: "",
+      kbname: 'wikidata'
+    };
+    samplequeries(payload);
+  });
+  $('#wd_ideal_3').on('click', function () {
+    var payload = {
+      subject: "New York: state of the United States of America",
+      subjectID: "Q1384",
+      predicate: "P1082: population",
+      object: "",
+      kbname: 'wikidata'
+    };
+    samplequeries(payload);
+  });
+  $('#dbpm_ideal_1').on('click', function () {
+    var payload = {
+      subject: "Google",
+      subjectID: "Google",
+      predicate: "dbo: employer",
+      object: "",
+      kbname: 'dbpedia_mapped'
+    };
+    samplequeries(payload);
+  });
+  $('#dbpm_ideal_2').on('click', function () {
+    var payload = {
+      subject: "Kolkata",
+      subjectID: "Kolkata",
+      predicate: "dbo: population total",
+      object: "",
+      kbname: 'dbpedia_mapped'
+    };
+    samplequeries(payload);
+  });
+  // $('#dbpm_ideal_2').on('click', function () {
+  //   var payload = {
+  //     subject: "Lufthansa",
+  //     subjectID: "Lufthansa",
+  //     predicate: "dbo: hub airport",
+  //     object: "",
+  //     kbname: 'dbpedia_mapped'
+  //   };
+  //   samplequeries(payload);
+  // });
   // $('#example1').on('click', function () {
   //   var payload = {
   //     waitmsg: "<div class='alert alert-info alert-dismissible' style='margin-bottom: 0px'><strong>!!</strong>Hold on to your seats, we are fetching the results!</div>",
@@ -853,23 +969,149 @@ $(document).ready(function () {
   //   };
   //   samplequeries(payload);
   // });
-  // ******************************** result events ******************************//
-  // $("#p1").on('click', function () {
-  //   if ($("#s1").is(":hidden")) {
-  //     $("#s1").show();
-  //   }
-  //   else {
-  //     $("#s1").hide(); 
-  //   }
-  //   if ($("#o1").is(":hidden")) {    
-  //     $("#o1").show();
-  //   }
-  //   else {
-  //     $("#o1").hide();
-  //   }
-  // });
-  // $(".p2").on('click', function () {
-  //   alert('clicked');
-  // });
+  // ******************************** predicate button click events ******************************//
+  $('#p1').on('click', function () {
+    console.log('p1 clicked!!: ', $(this).html());
+    $('#p1stat').toggle();
+  });
 
+  // requires event delegation for dynamically added tags
+  $('.second').on('click', '.p2', function () {
+    console.log('p2 clicked!!: ',$(this).html());
+    $(this).closest('tr').next().toggle();
+  });
+
+  //  ******************************* nav controls ********************************//
+  $('#navbar').on('click', 'a', function () {
+    $('#navbar .active').removeClass('active');
+    $(this).addClass('active');
+  });
+  // ******************************** free text KB selection events **************************************//
+  // changes made on selecting a KB preference
+  $("#ftWD-btn").click(function () {
+    if (ftoption !== 'wikidata') {
+      // refresh options when KB changes
+      ft_form_refresh();
+    }
+    ftoption = 'wikidata';
+    $("#ftWD-btn").addClass("btn-outline-infp").removeClass("btn-link");
+    $("#ftDBPr-btn").addClass("btn-link").removeClass("btn-outline-info");
+    $("#ftDBPm-btn").addClass("btn-link").removeClass("btn-outline-info");
+    
+    // $("#predicate").predautocomplete();
+  });
+  $("#ftDBPr-btn").click(function () {
+    if (ftoption !== 'dbpedia_raw') {
+      // refresh options when KB changes
+      ft_form_refresh();
+    }
+    ftoption = 'dbpedia_raw';
+    $("#ftWD-btn").addClass("btn-link").removeClass("btn-outline-info");
+    $("#ftDBPm-btn").addClass("btn-link").removeClass("btn-outline-info");
+    $("#ftDBPr-btn").addClass("btn-outline-info").removeClass("btn-link");
+    // $("#predicate").predautocomplete();
+  });
+  $("#ftDBPm-btn").click(function () {
+    if (option !== 'dbpedia_mapped') {
+      // refresh options when KB changes
+      ft_form_refresh();
+    }
+    option = 'dbpedia_mapped';
+    $("#ftWD-btn").addClass("btn-link").removeClass("btn-outline-info");
+    $("#ftDBPr-btn").addClass("btn-link").removeClass("btn-outline-info");
+    $("#ftDBPm-btn").addClass("btn-outline-info").removeClass("btn-link");
+    // $("#predicate").predautocomplete();
+  });
+
+  // ******************************* alignment tab click *************************** //
+  $("#nav_topalign").on('click', 'a', function () {
+    var path;
+    var kb_name = $(this).html();
+    if (kb_name === "Wikidata" && $("#tbl_wd_topalign tr").length <= 1){
+      $.ajax({
+        type: 'GET',
+        url : flaskurl+'getalignments',
+        dataType: 'text',
+        data: {'kbname': 'wikidata'},
+        success: function(result, status){
+          
+          var data = $.csv.toObjects(result);
+          console.log(data);
+          data.forEach(function (item) {
+            $("#tbl_wd_topalign > tbody").append(get_table_data(item));
+          });
+          $('#tbl_wd_topalign').DataTable({
+            "order": [[2,"desc"]]
+          });
+          $('.dataTables_length').addClass('bs-select');
+        },
+        error: function(){
+          console.log("Couldn't load WD alignment csv file :(");
+        },
+        cache: false
+      });
+    }
+    else if (kb_name == 'DBpedia raw' && $("#tbl_dbpr_topalign tr").length <= 1){
+      $.ajax({
+        type: 'GET',
+        url : flaskurl+'getalignments',
+        dataType: 'text',
+        data: {'kbname': 'dbpedia_raw'},
+        success: function(result, status){
+          var data = $.csv.toObjects(result);
+          data.forEach(function (item) {
+            $("#tbl_dbpr_topalign > tbody").append(get_table_data(item));
+          });
+          $('#tbl_dbpr_topalign').DataTable({
+            "order": [[2,"desc"]]
+          });
+          $('.dataTables_length').addClass('bs-select');
+        },
+        error: function(){
+          console.log("Couldn't load DBPr alignment csv file :(");
+        },
+        cache: false
+      });
+    }
+    else if (kb_name == 'DBpedia mapped' && $("#tbl_dbpm_topalign tr").length <= 1) {
+      $.ajax({
+        type: 'GET',
+        url : flaskurl+'getalignments',
+        dataType: 'text',
+        data: {'kbname': 'dbpedia_mapped'},
+        success: function(result, status){
+          var data = $.csv.toObjects(result);
+          data.forEach(function (item) {
+            $("#tbl_dbpm_topalign > tbody").append(get_table_data(item));
+          });
+          $('#tbl_dbpm_topalign').DataTable({
+            "order": [[2,"desc"]]
+          });
+          $('.dataTables_length').addClass('bs-select');
+        },
+        error: function(){
+          console.log("Couldn't load DBPm alignment csv file :(");
+        },
+        cache: false
+      });
+    }
+  });
+  // ************************* #ftq query event ******************************//
+  $("#ftsearch").click(function () {
+    console.log($("#ftquery").val());
+    var query = $("#ftquery").val();
+    $.ajax({
+      type: 'GET',
+      url : flaskurl + 'ftresults',
+      datatype : 'json',
+      data : {'query': query},
+      success : function(result, status){
+        console.log("success!");
+        console.log(result);
+      },
+      error: function() {
+        console.log("no results returned!");
+      }
+    });
+  });
 });

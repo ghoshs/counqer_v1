@@ -7,6 +7,11 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<!-- JQuery -->
 	<script src="{{ url_for('static', filename='scripts/jquery.min.js') }}"></script>
+	<!-- JQuery csv handling library -->
+	<script src="{{ url_for('static', filename='scripts/jquery.csv.min.js') }}"></script>
+	<!-- JQuery datatables script -->
+	<script src="{{ url_for('static', filename='DataTables/datatables.min.js') }}"></script>
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='DataTables/datatables.min.css') }}"/>
 	<!-- Bootstrap files -->
 	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/bootstrap.min.css') }}">
 	<script src="{{ url_for('static', filename='scripts/bootstrap.min.js') }}"></script>
@@ -14,14 +19,22 @@
 	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/mystyles.css') }}">
 </head>
 <body>
-<div class="jumbotron text-center">
+<nav class='container sticky'>
+	<ul id='navbar'>
+		<li><a class="active" href="#">Home</a></li>
+		<li><a href="#ftq">Free text query</a></li>
+		<li><a href="#topalign">Top alignments</a></li>
+	</ul>
+</nav>
+<div class="jumbotron text-center" id="header">
 	<!-- <h2>CounQER: Counting Quantifiers and related Entity-valued Relations</h2> -->
-	<h2>CounQER: Extending Question Answering with Aligned Counting and Enumerating Predicates</h2>
-	<!-- <hr> -->
-	
+	<h1>CounQER</h1>
+	<h2>Counting Quantifiers and Entity-valued predicates</h2>
 </div>
 
-<div class="container">
+<div class="container body" id="home">
+	<h2>Structured query on set predicates</h2>
+	<hr>
 	<div class="row">
 		<p>Provide the name of an entity (either a subject or an object) and pick any predicate from the dropdown. CounQER retrieves SPO triples from Knowledge Bases which answer your query. Additionally, it also tries to provide supplementary count related facts with respect to the queried entity.<br>
 		You can choose between three Knowledge Bases - <strong>Wikidata</strong> <img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30">, <strong>DBpedia raw extraction</strong> <img src="{{ url_for('static', filename='images/DBpediarawLogo.png') }}" width="30"> and <strong>DBpedia mapping-based extraction</strong> <img src="{{ url_for('static', filename='images/DBpediamapLogo.png') }}" width="30">.<br>
@@ -29,107 +42,76 @@
 		<!-- <hr> -->
 	</div>
 	<!-- <form class="row"> -->
-		<div class="row vertical-align no-gutter">
-			<div class="col-sm-3">
-				<div class="input-group">
-					<span class="input-group-addon">Subject</span>
-					<input autoComplete="off" id="subject" type="text" class="form-control" name="subject" placeholder="Subject" list="subentities">
-					<datalist id="subentities"></datalist>
-				</div>
+	<div class="row vertical-align no-gutter">
+		<div class="col-sm-1 refresh">
+			<button type="button" class="btn btn-link">
+				<!-- <img src="images/ocat2.png" width="50"> -->
+				<span class="glyphicon glyphicon-refresh" style="font-size: 2.7em"></span>
+			</button>
+		</div>
+		<div class="col-sm-3">
+			<div class="input-group">
+				<span class="input-group-addon">Subject</span>
+				<input autoComplete="off" id="subject" type="text" class="form-control" name="subject" placeholder="Subject" list="subentities">
+				<datalist id="subentities"></datalist>
 			</div>
-			<div class="col-sm-3">
-				<div class="input-group">
-					<span class="input-group-addon">Predicate</span>
-					<input autoComplete="off" id="predicate" type="text" class="form-control" name="predicate" placeholder="Predicate" list="predentities">
-					<datalist id="predentities"></datalist>
-				</div>
+		</div>
+		<div class="col-sm-3">
+			<div class="input-group">
+				<span class="input-group-addon">Predicate</span>
+				<input autoComplete="off" id="predicate" type="text" class="form-control" name="predicate" placeholder="Predicate" list="predentities">
+				<datalist id="predentities"></datalist>
 			</div>
-			<!-- <div class="col-sm-2">
-				<div class="input-group">
-					<span class="input-group-addon">Object</span>
-					<input autoComplete="off" id="object" type="text" class="form-control" name="object" placeholder="Object" list="objentities">
-					<datalist id="objentities"></datalist>
-				</div>
-			</div> -->
-			<div class="col-sm-1">
-				<button type="button" class="btn btn-link" id="query">
-					<span class="glyphicon glyphicon-search" style="font-size: 2em"></span>
-				</button>
-			</div>
-			<div class="col-sm-3">
-				<div class="btn-grp">
-					<!-- <button type="button" class="btn btn-link">
-						<img src="images/ocat1.png" width="50">
+		</div>
+		<div class="col-sm-1">
+			<button type="button" class="btn btn-link" id="query">
+				<span class="glyphicon glyphicon-search" style="font-size: 2em"></span>
+			</button>
+		</div>
+		<div class="col-sm-3">
+			<div class="btn-grp">
+					<button type="button" class="btn btn-outline-info" id="WD-btn">
+						<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30" title="Wikidata">
 					</button>
-					<div class="dropdown-content"> -->
-						<button type="button" class="btn btn-outline-info" id="WD-btn">
-							<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30" title="Wikidata">
-						</button>
-						<button type="button" class="btn btn-link" id="DBPr-btn">
-							<img src="{{ url_for('static', filename='images/DBpediarawLogo.png') }}" width="30" title="DBP: raw KB">
-						</button>
-						<button type="button" class="btn btn-link" id="DBPm-btn">
-							<img src="{{ url_for('static', filename='images/DBpediamapLogo.png') }}" width="30" title="DBP: mapping KB">
-						</button>
-					<!-- </div> -->
-				</div>
+					<button type="button" class="btn btn-link" id="DBPr-btn">
+						<img src="{{ url_for('static', filename='images/DBpediarawLogo.png') }}" width="30" title="DBP: raw KB">
+					</button>
+					<button type="button" class="btn btn-link" id="DBPm-btn">
+						<img src="{{ url_for('static', filename='images/DBpediamapLogo.png') }}" width="30" title="DBP: mapping KB">
+					</button>
+				<!-- </div> -->
 			</div>
 		</div>
-		<div id="formalert" class="row vertical-align" role="alert" style="display: none" data-hide="formalert">
-			<div class="alert alert-danger alert-dismissible">
-				<!-- Give it a click if you like.
-				<button type="button" class="close" aria-label="Close">
-				<span aria-hidden="true">&times;</span>
-				</button> -->
-			</div>
+	</div>
+	<div id="formalert" class="row vertical-align" role="alert" style="display: none" data-hide="formalert">
+		<div class="alert alert-danger alert-dismissible">
 		</div>
-	<!-- </form> -->
-	<br>
+	</div>
 	<!-- result section with query status bar, examples and returned SPO triples  -->
-	<div class="row" style="justify-content: left">
-		<div class="col-sm-10">	
+	<div class="row no-gutter" style="justify-content: left">
+		<div class="col-sm-8">	
 			<!-- form refresh & query status -->
-			<div class="row">
-				<div class="col-sm-1 refresh">
-					<button type="button" class="btn btn-link">
-						<!-- <img src="images/ocat2.png" width="50"> -->
-						<span class="glyphicon glyphicon-refresh" style="font-size: 2.7em"></span>
-					</button>
-				</div>
-				<div id="displayalert" class="col-sm-8" role="alert">
+			<div class="row no-gutter">
+				<div class="col-sm-2"></div>
+				<div id="displayalert" class="col-sm-8" role="alert" style="display: none" data-hide="displayalert">
 					<div class="alert alert-info alert-dismissible" style="margin-bottom: 0px">
 					 We are waiting for your input.
-					<!-- <button type="button" class="close" aria-label="Close"> -->
-					<!-- <span aria-hidden="true">&times;</span> -->
-					<!-- </button> -->
 					</div>
 				</div>
 			</div>
-			<!-- direct result section -->
-			<!-- <div class="row vertical-align first" style="display: none">
-				<div class="col btn" id="s1">
-				</div>
-				<div class="col btn btn-primary" id="p1">
-				</div>
-				<div class="col btn" id="o1"> 
-				</div>
-			</div> -->
 			<table class="table first" style="display: none">
-				<thead>
+				<tbody>
 					<tr>
 						<td id="s1" class="text-center partial"></td>
 						<td class="text-center"><div class="col-12 btn btn-primary" id="p1"></div></td>
 						<td id="o1" class="text-center partial"></td>
 					</tr>
-				</thead>
+					<tr id="p1stat" style="display: none"></tr>
+				</tbody>
 			</table>
-			<br>
+			<!-- <br> -->
 			<!-- related result section -->
 			<div class="row no-gutter text-center">
-				<!-- <div class="second" style="display: none">
-					<strong>Related Predicates</strong>
-					<hr>
-				</div> -->
 				<table class="table second" style="display: none">
 					<thead>
 						<tr><td class="text-center" colspan="3"></td></tr>
@@ -140,65 +122,189 @@
 			</div>
 		</div>
 		<!-- Example column -->
-		<div class="col-sm-2">
-			<!-- <button type="button" class="btn btn-primary btn-block"> -->
-				<!-- <span class="glyphicon glyphicon-chevron-down"></span> Examples -->
-			<!-- </button> -->
-				<!-- <div class="dropdown-content"> -->
-				<div class="row">
+		<div class="col-sm-4" id="examples">
+				<div class="row no-gutter">
 					<strong>Examples</strong>
 				</div>
-				<div class="row">
+				<div class="row no-gutter">
 					<button type="button" class="btn btn-link" id="wd_eg_1">
 						<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30"> Microsoft, employees, ?						
 					</button>
 				</div>
-				<div class="row">
+				<div class="row no-gutter">
 					<button type="button" class="btn btn-link" id="dbpm_eg_1">
 						<img src="{{ url_for('static', filename='images/DBpediamapLogo.png') }}" width="30"> Wyoming Legislature, number of members, ?
 					</button>
 				</div>
-				<div class="row">
+				<div class="row no-gutter">
 					<button type="button" class="btn btn-link" id="dbpr_eg_1">
 						<img src="{{ url_for('static', filename='images/DBpediarawLogo.png') }}" width="30"> Leander Paes, gold, ?						
 					</button>
 				</div>
+				<div class="row no-gutter">
+					<strong>Ideal Alignments</strong><sup><a href="#fnIdeal" id="divIdeal">*</a></sup>
+				</div>
+				<div class="row no-gutter">
+					<button type="button" class="btn btn-link" id="wd_ideal_1">
+						<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30"> James A. Garfield, child, ? 
+					</button>
+				</div>
+				<div class="row no-gutter">
+					<button type="button" class="btn btn-link" id="wd_ideal_2">
+						<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30"> World War I , number of deaths, ? 
+					</button>
+				</div>
+				<div class="row no-gutter">
+					<button type="button" class="btn btn-link" id="wd_ideal_3">
+						<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30"> New York, population, ? 
+					</button>
+				</div>
+				<div class="row no-gutter">
+					<button type="button" class="btn btn-link" id="dbpm_ideal_1">
+						<img src="{{ url_for('static', filename='images/DBpediamapLogo.png') }}" width="30"> Google, employer, ?
+					</button>
+				</div>
+				<div class="row no-gutter">
+					<button type="button" class="btn btn-link" id="dbpm_ideal_2">
+						<img src="{{ url_for('static', filename='images/DBpediamapLogo.png') }}" width="30"> Kolkata, population total, ?
+					</button>
+				</div>
 				<!-- <div class="row">
-					<button type="button" class="btn btn-link" id="example1">
-						<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30"> Grey's Anatomy, Creator, ?
-					</button>
-				</div>
-				<div class="row">
-					<button type="button" class="btn btn-link" id="example2">
-						<img src="{{ url_for('static', filename='images/DBpediaLogo.png') }}" width="30"> McGill University, Faculty size, ?
-					</button>
-				</div>
-				<div class="row">
-					<button type="button" class="btn btn-link" id="example3">
-						<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30"> World War I, Deaths, ?
-					</button>
-				</div>
-				<div class="row">
-					<button type="button" class="btn btn-link" id="example4">
-						<img src="{{ url_for('static', filename='images/DBpediaLogo.png') }}" width="30"> ?, Hub airport, Frankfurt
-					</button>
-				</div>
-				<div class="row">
-					<button type="button" class="btn btn-link" id="example5">
-						<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30"> Game of Thrones, Series, ?
+					<button type="button" class="btn btn-link" id="dbpm_ideal_2">
+						<img src="{{ url_for('static', filename='images/DBpediamapLogo.png') }}" width="30"> Lufthansa, hub airport, ?
 					</button>
 				</div> -->
+				<div class="row no-gutter">
+					<sup id="fnIdeal">*We show some ideal aligments in KBs which are missed by CounQER.
+						<!-- <a href="#divIdeal">↩</a> -->
+					</sup>
+				</div>
 		</div>
 	</div>
-
-<div class="footer">
-	<img src="{{ url_for('static', filename='images/mpilogo-inf-compact.png') }}" width="100">
-	<a href="https://imprint.mpi-klsb.mpg.de/inf/counqer.mpi-inf.mpg.de">Imprint</a> |
-	<a href="https://data-protection.mpi-klsb.mpg.de/inf/counqer.mpi-inf.mpg.de">Data Protection</a>
-
 </div>
-	
+
+<div class="container body" id="ftq">
+	<h2>Free-form query on set predicates</h2>
+	<hr>
+	<div class="row vertical-align no-gutter">
+		<div class="col-sm-1 refresh">
+			<button type="button" class="btn btn-link">
+				<!-- <img src="images/ocat2.png" width="50"> -->
+				<span class="glyphicon glyphicon-refresh" style="font-size: 2.7em"></span>
+			</button>
+		</div>
+		<div class="col-sm-6">
+			<div class="input-group">
+				<span class="input-group-addon">Query</span>
+				<input autoComplete="off" id="ftquery" type="text" class="form-control" name="query" placeholder="Start typing..">
+			</div>
+		</div>
+		<div class="col-sm-1">
+			<button type="button" class="btn btn-link" id="ftsearch">
+				<span class="glyphicon glyphicon-search" style="font-size: 2em"></span>
+			</button>
+		</div>
+		<div class="col-sm-3">
+			<div class="btn-grp">
+				<!-- <button type="button" class="btn btn-link">
+					<img src="images/ocat1.png" width="50">
+				</button>
+				<div class="dropdown-content"> -->
+					<button type="button" class="btn btn-outline-info" id="ftWD-btn">
+						<img src="{{ url_for('static', filename='images/wikidataLogo.png') }}" width="30" title="Wikidata">
+					</button>
+					<button type="button" class="btn btn-link" id="ftDBPr-btn">
+						<img src="{{ url_for('static', filename='images/DBpediarawLogo.png') }}" width="30" title="DBP: raw KB">
+					</button>
+					<button type="button" class="btn btn-link" id="ftDBPm-btn">
+						<img src="{{ url_for('static', filename='images/DBpediamapLogo.png') }}" width="30" title="DBP: mapping KB">
+					</button>
+				<!-- </div> -->
+			</div>
+		</div>
+	</div>
 </div>
+
+<div class="container body" id="topalign">
+	<h2>Top alignments from all KBs</h2>
+	<hr>
+	<ul class="nav nav-tabs" id="nav_topalign">
+		<li class="active"><a data-toggle="tab" href="#ow_topalign">Overview</a></li>
+		<li><a data-toggle="tab" href="#wd_topalign">Wikidata</a></li>
+		<li><a data-toggle="tab" href="#dbpr_topalign">DBpedia raw</a></li>
+		<li><a data-toggle="tab" href="#dbpm_topalign">DBpedia mapped</a></li>
+		<!-- <li><a data-toggle="tab" href="#menu3">Menu 3</a></li> -->
+	</ul>
+	<div class="tab-content">
+		<div id="ow_topalign" class="tab-pane fade in active">
+			We show the top alignment pairs in each KB. 
+		</div>
+
+		<div id="wd_topalign" class="tab-pane fade">
+		  <h3>Wikidata</h3>
+		  <div class="row no-gutter">      	
+		      <table class="searchable sortable table-striped table-bordered" id='tbl_wd_topalign'>
+		      	<thead>
+		      		<tr>
+		      			<th>Enumerating Predicate</th>
+		      			<th>Counting Predicate</th>
+		      			<th>Score</th>
+		      		</tr>
+		      	</thead>
+		      	<tbody></tbody>
+		      </table>
+		  </div>
+		</div>
+		<div id="dbpr_topalign" class="tab-pane fade">
+		  <h3>DBpedia raw</h3>
+		  <div class="row no-gutter">      	
+		      <table class="searchable sortable table-striped table-bordered" id='tbl_dbpr_topalign'>
+		      	<thead>
+		      		<tr>
+		      			<th>Enumerating Predicate</th>
+		      			<th>Counting Predicate</th>
+		      			<th>Score</th>
+		      		</tr>
+		      	</thead>
+		      	<tbody></tbody>
+		      </table>
+		  </div>
+		</div>
+		<div id="dbpm_topalign" class="tab-pane fade">
+		  <h3>DBpedia mapped</h3>
+		  <div class="row no-gutter">      	
+		      <table class="searchable sortable table-striped table-bordered" id='tbl_dbpm_topalign'>
+		      	<thead>
+		      		<tr>
+		      			<th>Enumerating Predicate</th>
+		      			<th>Counting Predicate</th>
+		      			<th>Score</th>
+		      		</tr>
+		      	</thead>
+		      	<tbody></tbody>
+		      </table>
+		  </div>
+		</div>
+	</div>
+	<div class="row no-gutter">
+		<sup>We denote alignemnts missed by CounQER with a <strong>*</strong> by the scores.</sup>
+	</div>
+</div>
+
+<div id="footer">
+	<div class="row vertical-align no-gutter">
+		<div class="col-sm-2 align-self-start text-left">
+			<img src="{{ url_for('static', filename='images/mpilogo-inf-transparent.png') }}" width="150">
+		</div>
+		<div class="col-sm-8 align-self-center text-center">
+			<a href="https://imprint.mpi-klsb.mpg.de/inf/counqer.mpi-inf.mpg.de">Imprint</a> |
+			<a href="https://data-protection.mpi-klsb.mpg.de/inf/counqer.mpi-inf.mpg.de">Data Protection</a> |
+			<a href="mailto:ghoshs@mpi-inf.mpg.de">Contact</a> |
+			<a href="#header">Return to top</a>
+		</div>
+	</div>
+</div>
+
 <script type="text/javascript" src="{{ url_for('static', filename='scripts/myscript.js') }}"></script>
 </body>
 </html>

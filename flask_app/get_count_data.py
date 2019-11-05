@@ -45,8 +45,13 @@ wd_labels = {}
 
 # read prednames and map to ID
 def get_predID(predicate):
+	print('get predID: ',predicate)
 	if 'dbp:' in predicate or 'dbo:' in predicate:
-		pred = predicate.split(' ')[1] + ''.join([x[0].upper()+x[1:] for x in predicate.split(' ')[2:]])
+		pred = predicate.split(' ')[1][0].lower() + predicate.split(' ')[1][1:] + ''.join([x[0].upper()+x[1:] for x in predicate.split(' ')[2:]])
+		if 'dbp:' in predicate:
+			pred = 'http://dbpedia.org/property/' + pred
+		else:
+			pred = 'http://dbpedia.org/ontology/' + pred
 	# elif 'dbo:' in predicate:
 		# pred = predicate.split(' ')[1] + ''.join([x[0].upper()+x[1:] for x in predicate.split(' ')[2:]])
 	elif len(re.findall('P[0-9]+:', predicate)) > 0:
@@ -54,7 +59,7 @@ def get_predID(predicate):
 	return pred
 
 def get_pred_stats(response, kb_name):
-	stats = {}
+	stats = {'response': {}, 'response_inv': {}}
 	set_predicates = open(fpath_set_predicates+kb_name+'.json').read()
 	set_predicates = set_predicates.split('jsonCallback(')[1][:-1]
 	set_predicates = json.loads(set_predicates)
@@ -62,13 +67,57 @@ def get_pred_stats(response, kb_name):
 	data = pd.read_csv(fpath_pred_property+kb_name+'.csv')
 	data_inv = pd.read_csv(fpath_pred_property+kb_name+'_inv.csv')
 
-	# query predicate is counting
-	if response['p1'] in set_predicates['predC']:
-		pred = get_predID(response['p1'])
-		result = data.loc[data['predicate'].str.endswith(pred)].to_json(orient='records')
-		stats[response['p1']] = json.loads(result)
-	else:
-		stats['error'] = 'None as of now'
+	for item in response['response']:
+		# if 'error' in item:
+		# 	continue
+		if 'p2' in item:
+			lookup = item['p2']
+			lookuptype = 'p2'
+		else:
+			lookup = response['p1']
+			lookuptype = 'p1'
+		# if 'dbo:' in lookup or 'dbp:' in lookup:
+		# 	lookup = lookup.lower()
+		if lookup in set_predicates['predC'] or lookup in set_predicates['predE']:
+			pred = get_predID(lookup)
+			if 'dbp:' in lookup or 'dbo:' in lookup:
+				result = data.loc[data['predicate'] == pred].to_json(orient='records')
+			else:
+				result = data.loc[data['predicate'].str.endswith(pred)].to_json(orient='records')
+			# stats['response'].append({lookuptype: lookup, 'stats': json.loads(result)})
+			stats['response'][lookup] = json.loads(result)
+			
+	for item in response['response_inv']:
+		# if 'error' in item:
+		# 	continue
+		if 'p2' in item:
+			lookup = item['p2']
+			lookuptype = 'p2'
+			type = response['get']
+		else:
+			lookup = response['p1']
+			lookuptype = 'p1'
+			type = 'predE' if response['get'] == 'predC' else 'predC'
+		# if 'dbo:' in lookup or 'dbp:' in lookup:
+		# 	lookup = lookup.lower()
+		if type == 'predE' and lookup in set_predicates['predE_inv']:
+			pred = get_predID(lookup)
+			if 'dbp:' in lookup or 'dbo:' in lookup:
+				result = data_inv.loc[data_inv['pred_inv'] == pred].to_json(orient='records')
+			else:
+				result = data_inv.loc[data_inv['pred_inv'].str.endswith(pred)].to_json(orient='records')
+			# stats['response_inv'].append({lookuptype: lookup, 'stats': json.loads(result)})
+			stats['response_inv'][lookup]= json.loads(result)
+		elif type == 'predC' and lookup in set_predicates['predC']:
+			pred = get_predID(lookup)
+			if 'dbp:' in lookup or 'dbo:' in lookup:
+				result = data.loc[data['predicate'] == pred].to_json(orient='records')
+			else:
+				result = data.loc[data['predicate'].str.endswith(pred)].to_json(orient='records')
+			# stats['response_inv'].append({lookuptype: lookup, 'stats': json.loads(result)})
+			stats['response_inv'][lookup]= json.loads(result)
+	print('response sent to pred stats: ', response)
+	print('pred stats: ', stats)
 	return stats
 
 def load_wd_plabels():
@@ -77,7 +126,7 @@ def load_wd_plabels():
 		reader = csv.reader(fp, quoting=csv.QUOTE_MINIMAL)
 		for row in reader:
 			predicate = row[0].split('/')[-1]
-			wd_labels[predicate] = row[1].lower()
+			wd_labels[predicate] = predicate + ': ' + row[1].lower()
 
 def wd_sparql(query, pred_list):
 	response = []
@@ -160,18 +209,6 @@ def query_wd(subID, predID, objID, df_score):
 		get = 'predE'
 	else:
 		response['p1'] = predID
-		# if len(objID) > 0:
-		# 	response['o1'] = objID
-		# 	q = """SELECT ?s1 ?s1Label WHERE {
-		# 				SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-		# 				OPTIONAL {?s1 wdt:""" + predID.split(':')[0] + """ wd:""" + objID.strip() + """.}
-		# 				} limit """ + responselimit
-		# else:
-		# 	response['s1'] = subID
-		# 	q = """SELECT ?o1 ?o1Label WHERE {
-		# 			SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-		# 			OPTIONAL {wd:""" + subID.strip() + """ wdt:""" + predID.split(':')[0] + """ ?o1.}
-		# 			} limit """ + responselimit
 		q = """SELECT ?o1 ?o1Label WHERE {
 				SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
 				OPTIONAL {wd:""" + subID.strip() + """ wdt:""" + predID.split(':')[0] + """ ?o1.}
@@ -182,7 +219,7 @@ def query_wd(subID, predID, objID, df_score):
 		print('L161: ', q)
 
 		q = """SELECT ?s1 ?s1Label WHERE {
-				SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+				SERVICE wikibase:label { bd:serviceParam wikibase:language "en"property/doublesre. }
 				OPTIONAL {?s1 wdt:""" + predID.split(':')[0] + """ wd:""" + subID.strip() + """.}
 				} limit """ + responselimit
 		response['response_inv'] = wd_sparql([q], [''])
@@ -195,7 +232,7 @@ def query_wd(subID, predID, objID, df_score):
 		return response
 	print('L174: ', 'value get = ', get)
 	if 'predC' in get:
-		temp = df_score.loc[df_score['predE'].str.contains(pred)]
+		temp = df_score.loc[df_score['predE'].str.split('/').str[-1].str.split('_').str[0] == pred]
 		if len(temp['predE'].unique()) > 1:
 			inv = True
 		if inv:
@@ -285,7 +322,7 @@ def query_wd(subID, predID, objID, df_score):
 		# 			query_pred_list.append(row.predC.split('/')[-1])
 
 	elif 'predE' in get and len(objID) == 0:
-		temp = df_score.loc[df_score['predC'].str.contains(pred)]
+		temp = df_score.loc[df_score['predC'].str.endswith(pred)]
 		temp_ranked = temp.sort_values(by='score', ascending=False).head(n=5)
 		# case I/II
 		query.append("""SELECT ?o1 ?o1Label WHERE {
@@ -298,7 +335,7 @@ def query_wd(subID, predID, objID, df_score):
 			if 'inv' in row.predE:
 				q = """SELECT ?s2 ?s2Label WHERE {
 				SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }\
-				OPTIONAL {?s2 wdt:""" + row.predE.split(':')[0] + """ wd:""" + subID.strip() + """.}
+				OPTIONAL {?s2 wdt:""" + row.predE.split('/')[-1].split('_inv')[0] + """ wd:""" + subID.strip() + """.}
 				} limit """ + responselimit
 				inv_query.append(q)
 				inv_query_pred_list.append(row.predE.split('/')[-1])
@@ -306,7 +343,7 @@ def query_wd(subID, predID, objID, df_score):
 			else:
 				q = """SELECT ?o2 ?o2Label WHERE {
 				SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-				OPTIONAL {wd:""" + subID.strip() + """ wdt:""" + row.predE.split('/')[-1].split('_inv')[0] + """ ?o2.}
+				OPTIONAL {wd:""" + subID.strip() + """ wdt:""" + row.predE.split('/')[-1] + """ ?o2.}
 				} limit """ + responselimit
 				query.append(q)
 				query_pred_list.append(row.predE.split('/')[-1]) 
@@ -345,8 +382,9 @@ def get_dbp_plabel(pred):
 	p_label = p_label[0].upper() + p_label[1:]
 	if len(re.findall('[A-Z][^A-Z]*', p_label)) > 0:
 		p_label = ' '.join(re.findall('[A-Z][^A-Z]*', p_label))
+		p_label = p_label.lower()
 
-	return p_label
+	return namespace+p_label
 
 def dbp_sparql(query, pred_list):
 	response = []
@@ -447,16 +485,6 @@ def query_dbp(subID, predID, objID, df_score):
 	else:
 		# when co-occuring pair does not exist return only direct result 
 		response['p1'] = predID
-		# if len(objID) > 0:
-		# 	response['o1'] = objID
-		# 	q = """SELECT ?s1 WHERE {
-		# 			OPTIONAL {?s1 <""" + pred_query + """> <http://dbpedia.org/resource/""" + objID.strip() + """>.}
-		# 		} limit """ + responselimit
-		# else:
-		# 	response['s1'] = subID
-		# 	q = """SELECT ?o1 WHERE {
-		# 			OPTIONAL {<http://dbpedia.org/resource/""" + subID.strip() + """> <""" + pred_query + """> ?o1.}
-		# 		} limit """ + responselimit
 		q = """SELECT ?o1 WHERE {
 				OPTIONAL {<http://dbpedia.org/resource/""" + subID.strip() + """> <""" + pred_query + """> ?o1.}
 			} limit """ + responselimit
@@ -477,7 +505,7 @@ def query_dbp(subID, predID, objID, df_score):
 	print('L452: ', get, pred)
 	# If the queries predicate is enumerable
 	if 'predC' in get:
-		temp = df_score.loc[df_score['predE'].str.contains(pred)]
+		temp = df_score.loc[df_score['predE'].str.split('_').str[0] == pred]
 		# ranking pairs by pearson corr. If corr value does not exist arrange by PMI.
 		if len(temp['predE'].unique()) > 1:
 			inv = True
@@ -583,7 +611,7 @@ def query_dbp(subID, predID, objID, df_score):
 			# case I related pred
 			else:
 				q = """SELECT ?o2 WHERE {
-					OPTIONAL {<http://dbpedia.org/resource/""" + subID.strip() + """> <""" + row.predE.split('_inv')[0] + """> ?o2.}
+					OPTIONAL {<http://dbpedia.org/resource/""" + subID.strip() + """> <""" + row.predE + """> ?o2.}
 				} limit """ + responselimit
 				query.append(q)
 				query_pred_list.append(row.predE)
@@ -607,6 +635,12 @@ def query_dbp(subID, predID, objID, df_score):
 		response['o1'] = objID
 	else:
 		response['s1'] = subID
+
+	# get pred stats before returning 
+	if 'dbo' in prefix:
+		response['stats'] = get_pred_stats(response, 'dbpedia_mapped')
+	elif 'dbp' in prefix:
+		response['stats'] = get_pred_stats(response, 'dbpedia_raw')
 	return response	
 
 # populate predC, predE predicate pair scores dpeending on KB
@@ -626,4 +660,3 @@ def related_predicate(option, subID, predID, objID = None):
 		return query_wd(subID, predID, objID, df_score)
 	else:
 		return query_dbp(subID, predID, objID, df_score)
-		

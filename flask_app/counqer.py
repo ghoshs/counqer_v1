@@ -1,6 +1,7 @@
-from flask import Flask, render_template, url_for, json, request, jsonify
+from flask import Flask, render_template, url_for, json, request, jsonify, send_from_directory
 from flask_cors import CORS, cross_origin
 from get_count_data import related_predicate
+from text_search import search_wikipedia
 try: 
 	import urllib2 as myurllib
 except ImportError:
@@ -9,6 +10,23 @@ except ImportError:
 app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
+
+@app.route('/ftresults', methods=['GET', 'POST'])
+@cross_origin()
+def free_text_search():
+	print("Query:: ", request.args.get('query'))
+	response = search_wikipedia(request.args.get('query'))
+	return jsonify(response)
+
+@app.route('/getalignments', methods=['GET','POST'])
+@cross_origin()
+def get_alignments():
+	print(request.args.get('kbname'))
+	filename = request.args.get('kbname')+".csv"
+	try:
+		return send_from_directory('static/data/alignments', filename=filename, as_attachment=True, cache_timeout=0)
+	except FileNotFoundError:
+		abort(404)
 
 # this is a comment
 @app.route('/spoquery', methods=['GET', 'POST'])
