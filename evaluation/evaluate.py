@@ -10,11 +10,11 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 from gensim.models import KeyedVectors
 
-server_path = '/GW/D5data-11/existential-extraction/'
-model = KeyedVectors.load_word2vec_format('/GW/D5data-9/existential-extraction/word2vec.6B.300d.txt',binary=False)
+server_path = './'
+model = KeyedVectors.load_word2vec_format('./word2vec.6B.300d.txt',binary=False)
 
 global wd_labels
-wd_prop_label_path = '/GW/D5data-11/existential-extraction/'
+wd_prop_label_path = './'
 # def parallelize(row, prefixes, df_GT):
 # 	global df_ling
 # 	if row[2] <= 0.0:
@@ -296,12 +296,12 @@ def get_final_alignment(ccrfname, pred_type):
 
 def main():
 	# path = '../alignment_crowd_annotations/eval_annotations/'
-	path = '/GW/D5data-11/existential-extraction/'
+	path = './'
 	GTfname = path + 'EtoC_GT_scores.csv'
 	# ccrfname = '../alignment/metrics_req/cooccur_alignment.csv'
 	# lingpath = '../alignment/metrics_req/'
-	ccrfname = '/GW/D5data-11/existential-extraction/metrics_req/cooccur_alignment.csv'
-	lingpath = '/GW/D5data-11/existential-extraction/metrics_req/'
+	ccrfname = './metrics_req/cooccur_alignment.csv'
+	lingpath = './metrics_req/'
 	print('EtoG started')
 	# get_scores(GTfname, ccrfname, lingpath, 'predE')
 	print('EtoG finished')

@@ -4,8 +4,8 @@ import unicodedata
 
 def main():
 	kb_name = 'dbp_map'
-	filein = '/GW/D5data-11/existential-extraction/count_information/integer_per_pred_per_sub_'
-	fileout = '/GW/D5data-11/existential-extraction/count_information/avg_integer_per_pred_per_sub_'
+	filein = './count_information/integer_per_pred_per_sub_'
+	fileout = './count_information/avg_integer_per_pred_per_sub_'
 
 	with open(filein+kb_name+'.csv') as fin:
 		reader = csv.reader(fin)

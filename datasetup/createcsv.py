@@ -133,8 +133,8 @@ def main():
 	kbprefix = ['http://rdf.freebase.com/ns/m.', 'http://rdf.freebase.com/ns/g.']
 	db = dbtable(kbprefix)
 	restart = 0
-	infile = '/GW/D5data-11/existential-extraction/freebase-rdf-latest.gz'
-	outfile = '/GW/D5data-11/existential-extraction/freebase_spot_1.csv'
+	infile = './existential-extraction/freebase-rdf-latest.gz'
+	outfile = './existential-extraction/freebase_spot_1.csv'
 	# infile = 'sampleout.ttl.gz'
 	# outfile = 'sampleout.csv'
 	readttl(infile, outfile, db, restart)

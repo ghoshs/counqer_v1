@@ -19,7 +19,7 @@ def main():
 	ep_inv_names = get_prednames('enumerating_inv_filtered.csv')
 	cp_names = get_prednames('counting_filtered.csv')
 	# path = './'
-	path = '/GW/D5data-11/existential-extraction/'
+	path = './existential-extraction/'
 	cooccur_alignment = False
 	cooccur_inv_alignment = False
 	linguistic_alignment = True

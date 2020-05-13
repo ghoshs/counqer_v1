@@ -11,7 +11,7 @@ global wd_labels, fb_label
 wd_labels = {}
 fb_label = {}
 
-wd_prop_label_path = '/GW/D5data-11/existential-extraction/'
+wd_prop_label_path = './existential-extraction/'
 
 def load_wd_labels():
 	global wd_labels
@@ -23,7 +23,7 @@ def load_wd_labels():
 
 def populate_fb_labels():
 	global fb_label
-	file = '/GW/D5data-11/existential-extraction/kb_entities/fb_entity_labels_short.csv'
+	file = './kb_entities/fb_entity_labels_short.csv'
 	with open(file)as fp:
 		reader = csv.reader(fp)
 		for row in tqdm(reader):
@@ -227,13 +227,13 @@ def create_data_file(fin_name, fout_name, type):
 
 def main():
 	# fin = '../alignment/scores/rel_score_sorted_by_E.csv'
-	fin = '/GW/D5data-11/existential-extraction/topC_eval.csv'
-	fout = '/GW/D5data-11/existential-extraction/data_byE.csv'
+	fin = '~/topC_eval.csv'
+	fout = '~/data_byE.csv'
 	create_data_file(fin, fout, 'byE')
 
 	# fin = '../alignment/scores/rel_score_sorted_by_G.csv'
-	fin = '/GW/D5data-11/existential-extraction/topE_eval.csv'
-	fout = '/GW/D5data-11/existential-extraction/data_byC.csv'
+	fin = '~/topE_eval.csv'
+	fout = '~/data_byC.csv'
 	create_data_file(fin, fout, 'byC')
 
 if __name__ == '__main__':

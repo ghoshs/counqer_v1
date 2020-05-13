@@ -4,15 +4,15 @@ import re
 from gensim.models import KeyedVectors
 from tqdm import tqdm
 
-model = KeyedVectors.load_word2vec_format('/GW/D5data-9/existential-extraction/word2vec.6B.300d.txt',binary=False)
+model = KeyedVectors.load_word2vec_format('./existential-extraction/word2vec.6B.300d.txt',binary=False)
 
 # p_50_pred_path = '../pred_property_p_50/'
 # wd_prop_label_path = '../datasetup/WD/'
 # outpath = './'
 
-p_50_pred_path = '/GW/D5data-11/existential-extraction/pred_property_p_50/'
-wd_prop_label_path = '/GW/D5data-11/existential-extraction/'
-outpath = '/GW/D5data-11/existential-extraction/alignment/'
+p_50_pred_path = './existential-extraction/pred_property_p_50/'
+wd_prop_label_path = './existential-extraction/'
+outpath = './existential-extraction/alignment/'
 
 splitby = {'dbp_map': 'http://dbpedia.org/ontology/', 'dbp_raw': 'http://dbpedia.org/property/', 
 			'wd': '/', 'fb': '/'}

@@ -4,7 +4,7 @@ from tqdm import tqdm
 from gensim.models import KeyedVectors
 
 global enumerating, counting, wd_labels
-wd_prop_label_path = '/GW/D5data-11/existential-extraction/'
+wd_prop_label_path = ''
 
 def load_prednames(fname):
 	predlist = []
@@ -76,7 +76,7 @@ def get_label_freebase(pred_list):
 
 def get_linguistic_metrics():
 	global wd_labels
-	model = KeyedVectors.load_word2vec_format('/GW/D5data-9/existential-extraction/word2vec.6B.300d.txt',binary=False)
+	model = KeyedVectors.load_word2vec_format('./word2vec.6B.300d.txt',binary=False)
 	wd_labels = load_wd_labels()
 
 	df = pd.DataFrame({'pred1': [], 'pred2': [], 'cosine_sim': []})
@@ -156,7 +156,7 @@ def get_pred(row, pred):
 def main():	
 	global enumerating, counting
 	# metric_path = '../alignment/'
-	metric_path = '/GW/D5data-11/existential-extraction/'
+	metric_path = ''
 
 	enumerating = load_prednames('./prednames/enumerating.csv')
 	counting = load_prednames('./prednames/counting.csv')

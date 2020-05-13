@@ -1,7 +1,7 @@
 import boto3
 
-key_id = 'AKIAIIG3GVFILFIAHBRQ'
-access_key = '5wYkXHFF1Hw0Mru+NPuQT/XxBOIqNkVx18GxPSN3'
+key_id = 'xxxxxxx'
+access_key = 'yyyyyyy'
 region_name = 'us-east-1'
 endpoint_url = 'https://mturk-requester.us-east-1.amazonaws.com'
 
@@ -24,12 +24,7 @@ message_subsequent = ('Dear Participant, '
 response = client.notify_workers(
     Subject='Invitation to complete an evaluation task',
     MessageText=message_subsequent,
-    WorkerIds=[
-        'A1GKEEI844CEKI', 'A1J1QKIGHFLF4M', 'A1NYV6LPHCYADS', 'A2BOXK0KVXGKPU', 'A2DYADMF9WPVO8', 'A2MJAXJEJ4SEQM', 'A2YO837C0O1E91',
-        'A37JENVKZQ56U6', 'A39YBLQYIUBR76', 'A3EZ0H07TSDAPW', 'A3GNQDFPZALU92', 'A3IL3HGJW7K6Q1', 'A3SKEW89V5S0DI', 'AX8EX2QI5HIQQ',
-        'AYJGJAIY0EXW'
-
-    ]
+    WorkerIds=['a', 'b']
 )
 
 print(response)

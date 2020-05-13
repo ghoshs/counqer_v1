@@ -11,7 +11,7 @@ class PostgresDB:
 	def __init__(self, tablename, params):
 		self.tablename = tablename['property']
 		self.spot_tb = tablename['spot']
-		self.csvpath = '/GW/D5data-11/existential-extraction/'
+		self.csvpath = ''
 		self.createDBconn(params)
 		# if createtb:
 		# 	self.create_pred_property_Table(tablename['direct'])

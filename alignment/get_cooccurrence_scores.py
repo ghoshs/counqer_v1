@@ -7,7 +7,7 @@ import pandas as pd
 import math
 
 # path = './'
-path = '/GW/D5data-11/existential-extraction/'
+path = './existential-extraction/'
 splitby = {'dbp_map': 'http://dbpedia.org/ontology/', 'dbp_raw': 'http://dbpedia.org/property/', 
 			'wd': 'http://www.wikidata.org/prop/direct/', 'fb': '/'}
 
